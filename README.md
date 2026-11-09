@@ -18,6 +18,11 @@ What was added:
 
 **The file format is the same as upstream KiCad of the same version**, so files you edit open as-is in regular KiCad (10 or 8).
 
+## Download
+
+**Latest version: [Releases, Latest](https://github.com/monyuonyu/kicad-ja-plus/releases/latest)** (the recommended 10.0.6 build; the 8.0.9 build that keeps the KiCad 8 format and earlier versions are listed on [Releases](https://github.com/monyuonyu/kicad-ja-plus/releases)).
+There are a Windows installer and zip, and a Linux (Ubuntu 24.04) tar.gz; see "Installing" below.
+
 ## What it can do
 
 There is a single entry point, `kicad-local` (`kicad-local help` lists the commands).

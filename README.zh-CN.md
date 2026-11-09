@@ -18,6 +18,11 @@
 
 **保存格式与对应版本的上游 KiCad 相同**，因此修改后的文件可以直接用普通的 KiCad（10 或 8）打开。
 
+## 下载
+
+**最新版：[Releases 的 Latest](https://github.com/monyuonyu/kicad-ja-plus/releases/latest)**（推荐的 10.0.6 版；保持 KiCad 8 格式的 8.0.9 版以及以前的版本见 [Releases](https://github.com/monyuonyu/kicad-ja-plus/releases) 列表）。
+提供 Windows 安装程序和 zip，以及 Linux（Ubuntu 24.04）的 tar.gz；安装方法见下文“安装”。
+
 ## 功能
 
 入口只有一个：`kicad-local`（`kicad-local help` 会列出命令）。

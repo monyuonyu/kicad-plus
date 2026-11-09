@@ -16,6 +16,11 @@ KiCad に、次のものを足したものです。版は 2 つあります。
 
 **保存形式は、それぞれの版の本家の KiCad と同じ**なので、直したファイルはふつうの KiCad（10 または 8）でそのまま開けます。
 
+## ダウンロード
+
+**最新版: [Releases の Latest](https://github.com/monyuonyu/kicad-ja-plus/releases/latest)**（10.0.6 のおすすめ版。KiCad 8 形式のまま使う 8.0.9 版と前の版は [Releases](https://github.com/monyuonyu/kicad-ja-plus/releases) の一覧に）。
+Windows のインストーラーと zip、Linux（Ubuntu 24.04）の tar.gz があります。入れ方は下の「入れ方」を。
+
 ## できること
 
 入口は `kicad-local` 1 つです（`kicad-local help` で一覧が出ます）。

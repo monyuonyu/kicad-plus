@@ -1,0 +1,28 @@
+From 9eb725724c40f8fa61ac6e07dca7a192765eb11f Mon Sep 17 00:00:00 2001
+From: shota <monyuonyu@gmail.com>
+Date: Tue, 10 Nov 2026 09:09:02 +0900
+Subject: [PATCH] ERC (8.0.9): the positions of the JSON report in schematic
+ units, not 100 times too small
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ eeschema/erc_report.cpp | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/eeschema/erc_report.cpp b/eeschema/erc_report.cpp
+index 104ad03..a82d3c9 100644
+--- a/eeschema/erc_report.cpp
++++ b/eeschema/erc_report.cpp
+@@ -110,7 +110,8 @@ bool ERC_REPORT::WriteJsonReport( const wxString& aFullFileName )
+ {
+     std::ofstream jsonFileStream( aFullFileName.fn_str() );
+ 
+-    UNITS_PROVIDER            unitsProvider( pcbIUScale, m_reportUnits );
++    // Schematic units: with pcbIUScale every position was 100 times too small
++    UNITS_PROVIDER            unitsProvider( schIUScale, m_reportUnits );
+     std::map<KIID, EDA_ITEM*> itemMap;
+ 
+     RC_JSON::ERC_REPORT reportHead;
+-- 
+2.43.0
+

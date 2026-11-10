@@ -41,6 +41,18 @@ def export_netlist(sch):
     return out.read_text(encoding="utf-8")
 
 
+def pin_name(fn, pin):
+    """端子の名前。KiCad 10 のネットリストは積み重ねた端子のために名前の後ろに「_番号」を付ける（VIN_1・
+    A_1）。比べるのは元の名前（VIN・A）なので外す。名前の無い端子は番号だけになるので None"""
+    if not fn:
+        return fn
+    if pin and fn == pin:
+        return None
+    if pin and fn.endswith("_" + pin):
+        return fn[:-len(pin) - 1] or None
+    return fn
+
+
 def parse_netlist(text):
     """kicad-cli の kicadsexpr ネットリストを読む。S 式として読むので、KiCad 8 の 1 行の書き方にも、
     KiCad 10 の要素ごとに改行する書き方にも対応する"""
@@ -69,7 +81,8 @@ def parse_netlist(text):
     nets = {}
     for n in sx.find(sx.one(root, "nets") or [], "net"):
         name = val(n, "name")
-        raw = [(val(d, "ref"), val(d, "pin"), val(d, "pinfunction"), val(d, "pintype")) for d in sx.find(n, "node")]
+        raw = [(val(d, "ref"), val(d, "pin"), pin_name(val(d, "pinfunction"), val(d, "pin")),
+                (val(d, "pintype") or "").split("+")[0]) for d in sx.find(n, "node")]
         nets[name] = [(r, p, f) for r, p, f, _ in raw]
         for ref, pin, fn, pt in raw:
             if ref in comps:

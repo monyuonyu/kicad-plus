@@ -28,6 +28,72 @@ NO_EXT_CAPS = {
 }
 
 
+SYMLIBS = Path("/usr/share/kicad/symbols")
+# 生成元（Zener の @stdlib/generics/Resistor など）の名前の語 → KiCad の記号
+WORDS = [("ferritebead", "Device:FerriteBead"), ("ferrite", "Device:FerriteBead"), ("resistor", "Device:R"),
+         ("capacitor_polarized", "Device:C_Polarized"), ("electrolytic", "Device:C_Polarized"), ("capacitor", "Device:C"),
+         ("inductor", "Device:L"), ("tvs", "Device:D_TVS"), ("zener", "Device:D_Zener"), ("led", "Device:LED"),
+         ("diode", "Device:D"), ("nmos", "Device:Q_NMOS"), ("pmos", "Device:Q_PMOS"), ("npn", "Device:Q_NPN"),
+         ("pnp", "Device:Q_PNP"), ("pinheader", "Connector_Generic:Conn"), ("header", "Connector_Generic:Conn"),
+         ("usb", "Connector:USB"), ("connector", "Connector_Generic:Conn"), ("regulator", "Regulator_Linear:LDO"),
+         ("ldo", "Regulator_Linear:LDO")]
+PREFIX = {"R": "Device:R", "C": "Device:C", "L": "Device:L", "FB": "Device:FerriteBead", "LED": "Device:LED",
+          "D": "Device:D", "J": "Connector_Generic:Conn", "P": "Connector_Generic:Conn", "CN": "Connector_Generic:Conn",
+          "USB": "Connector:USB"}
+
+
+def kicad_lib(lib):
+    """KiCad の標準の記号ライブラリの名前か（Device・Connector_Generic など）"""
+    name = lib.split(":")[0]
+    return bool(name) and (SYMLIBS / f"{name}.kicad_sym").is_file() or name == "power"
+
+
+def guess_lib(c, ref):
+    """標準のライブラリでない記号（Zener などの生成元の記号）の種類を推す。分からなければ None"""
+    # 記号の名前（ライブラリ名は見ない。Zener のライブラリ名 zener が「ツェナー」に当たった）
+    text = re.sub(r"[^a-z_]", "_", (c["lib"].split(":")[-1].split("/")[-1] + " "
+                                    + c.get("fields", {}).get("Description", "")).lower())
+    fp = c.get("footprint", "")
+    pins = {(d.get("fn") or "").upper() for d in c["pins"].values()}
+    for w, lib in WORDS:
+        if w in text.replace("_", "") or w in text:
+            if lib == "Device:D" and ({"A", "K"} - pins):
+                continue
+            return lib
+    if fp.startswith(("Connector", "TerminalBlock")):
+        return "Connector_Generic:Conn"
+    if {"G", "D", "S"} <= pins:
+        return "Device:Q_NMOS"
+    if {"B", "C", "E"} <= pins:
+        return "Device:Q_NPN"
+    if {"A", "K"} <= pins and len(c["pins"]) == 2:
+        return "Device:D_TVS" if any(w.lower() in (c["value"] + " " + c.get("fields", {}).get("MPN", "")).lower()
+                                     for w in TVS_WORDS) else "Device:D"
+    m = re.match(r"([A-Z]+)", ref)
+    if m and m.group(1) in PREFIX:
+        lib = PREFIX[m.group(1)]
+        if lib == "Device:C" and "CP_" in fp:
+            lib = "Device:C_Polarized"
+        return lib
+    io = {p for p in pins if re.match(r"^(V?IN|V?OUT|VI|VO)$", p)}
+    if len(io) >= 2 and any(p in pins for p in ("GND", "VSS")) and len(c["pins"]) <= 8:
+        return "Regulator_Linear:LDO"
+    return None   # 多ピンの IC は推さない（ロジック・メモリ・バスをマイコン扱いすると外部の線の指摘が山になる）
+
+
+def normalize(comps):
+    """生成元の記号に、推した KiCad の種類を lib として付ける（元の名前は lib_original）。推した部品の一覧"""
+    guessed = []
+    for ref, c in comps.items():
+        if ref.startswith("#") or kicad_lib(c["lib"]):
+            continue
+        g = guess_lib(c, ref)
+        if g:
+            c["lib_original"], c["lib"] = c["lib"], g
+            guessed.append((ref, c["lib_original"], g))
+    return guessed
+
+
 def kind(c):
     return c["lib"].split(":")[-1]
 
@@ -48,6 +114,7 @@ def is_gnd(net):
 
 
 COMPS = {}
+GUESSED = []   # 標準のライブラリでないので種類を推した部品 [(ref, 元の lib, 推した lib)]
 
 
 def is_power(net, nodes):
@@ -58,6 +125,12 @@ def is_power(net, nodes):
     return any(COMPS.get(r, {}).get("pins", {}).get(p, {}).get("type", "").startswith("power") for r, p, _ in nodes)
 
 
+def is_cap(c):
+    """コンデンサ（C・C_Small・C_Polarized・CP…。Conn_01x03 などのコネクタは違う）"""
+    k = kind(c)
+    return k == "C" or k.startswith(("C_", "CP"))
+
+
 def is_tvs(c):
     k = kind(c)
     return k.startswith("D") and (any(w.lower() in (c["value"] + " " + c["fields"].get("MPN", "")).lower() for w in TVS_WORDS)
@@ -66,6 +139,7 @@ def is_tvs(c):
 
 def lint(sch):
     comps, nets = ksim.parse_netlist(ksim.export_netlist(sch))
+    GUESSED[:] = normalize(comps)
     COMPS.clear()
     COMPS.update(comps)
     pinnet = {(r, p): n for n, nodes in nets.items() for r, p, _ in nodes}
@@ -139,7 +213,7 @@ def lint(sch):
         for n, d in c["pins"].items():
             fn = (d["fn"] or "").upper()
             if fn in ("IN", "VIN", "OUT", "VOUT"):
-                caps = [r for r, _, _ in nets[d["net"]] if r in comps and kind(comps[r]).startswith("C")
+                caps = [r for r, _, _ in nets[d["net"]] if r in comps and is_cap(comps[r])
                         and any(is_gnd(x["net"]) for x in comps[r]["pins"].values())]
                 if not caps:
                     add("電源", ref, f"{fn} 端子({d['net']})に GND へのコンデンサが無い(データシートの推奨を確認)")
@@ -172,6 +246,8 @@ def main():
     items, _ = lint(a.sch)
     lines = [f"- [{cat}] **{where}**: {msg}" for cat, where, msg in items]
     print(f"点検: 要確認 {len(items)} 件")
+    if GUESSED:
+        print("（標準のライブラリに無い記号なので、種類を推した: " + "、".join(f"{r} {o} → {g.split(':')[1]}" for r, o, g in GUESSED) + "）")
     print("\n".join(lines) or "なし")
     if a.md:
         Path(a.md).write_text("# 回路図の点検\n\n" + ("\n".join(lines) or "なし") + "\n", encoding="utf-8")

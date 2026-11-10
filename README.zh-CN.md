@@ -2,7 +2,9 @@
 
 > 本文译自 [README.ja.md](README.ja.md)（日文版为原文），对应提交 `fab6b11`。
 
-# kicad-ja-plus — 无需图形界面也能处理电路板的 KiCad 改进版
+# kicad-plus — 无需图形界面也能处理电路板的 KiCad 改进版
+
+（原名 **kicad-ja-plus**。旧命令名 `kicad-local`、`kicad-ja`、`pcbnew-ja`、`eeschema-ja` 仍可使用。）
 
 在 KiCad 的基础上增加了下列内容。共有两个版本。
 
@@ -20,7 +22,7 @@
 
 ## 下载
 
-**最新版：[Releases 的 Latest](https://github.com/monyuonyu/kicad-ja-plus/releases/latest)**（推荐的 10.0.6 版；保持 KiCad 8 格式的 8.0.9 版以及以前的版本见 [Releases](https://github.com/monyuonyu/kicad-ja-plus/releases) 列表）。
+**最新版：[Releases 的 Latest](https://github.com/monyuonyu/kicad-plus/releases/latest)**（推荐的 10.0.6 版；保持 KiCad 8 格式的 8.0.9 版以及以前的版本见 [Releases](https://github.com/monyuonyu/kicad-plus/releases) 列表）。
 提供 Windows 安装程序和 zip，以及 Linux（Ubuntu 24.04）的 tar.gz；安装方法见下文“安装”。
 
 ## 功能
@@ -93,7 +95,7 @@ kicad-plus review 新しい版 前の版 --out 確認/        # 一次完成 ERC
 ## 安装（Linux，预编译版）
 
 Releases 中提供了面向 Ubuntu 24.04（x86_64，WSL2 中的 Ubuntu 也可）的 tar.gz，10.0.6 和 8.0.9 两个版本都有
-（`kicad-ja-plus-<版本>-linux-x86_64.tar.gz` 和 `.sha256`）。
+（`kicad-plus-<版本>-linux-x86_64.tar.gz` 和 `.sha256`）。
 其中包含改进后的 kicad-cli、图形界面（`kicad`、`pcbnew`、`eeschema` 等）、kiface、pcbnew 的 Python 模块、图标、翻译（日语等）、
 无界面工具，**AI 聊天所用的 Python 和 Claude Agent SDK（`build/ai-runtime`）**，以及 **Freerouting 及其专用 Java（`build/freerouting`）**。
 wxWidgets、OpenCASCADE、ngspice 等公共组件以及元件库、3D 模型，使用系统中安装的上游 KiCad。
@@ -108,11 +110,11 @@ wxWidgets、OpenCASCADE、ngspice 等公共组件以及元件库、3D 模型，�
 2. 解压到任意位置，并把 `bin/` 加入 PATH
 
    ```
-   sha256sum -c kicad-ja-plus-10.0.6-linux-x86_64.tar.gz.sha256
-   tar xzf kicad-ja-plus-10.0.6-linux-x86_64.tar.gz
-   export PATH="$PWD/kicad-ja-plus-10.0.6-linux-x86_64/bin:$PATH"
+   sha256sum -c kicad-plus-10.0.6-linux-x86_64.tar.gz.sha256
+   tar xzf kicad-plus-10.0.6-linux-x86_64.tar.gz
+   export PATH="$PWD/kicad-plus-10.0.6-linux-x86_64/bin:$PATH"
    kicad-plus help
-   kicad-ja-plus-10.0.6-linux-x86_64/package/check-linux.sh   # 检查内容和运行情况（几十秒）
+   kicad-plus-10.0.6-linux-x86_64/package/check-linux.sh   # 检查内容和运行情况（几十秒）
    kicad-plus test        # 回归测试。全部 OK 即说明安装正确
    ```
 

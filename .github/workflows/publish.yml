@@ -3,9 +3,9 @@ name: Publish a build
 # ビルドの成果物を、リリース（試用版）に載せる。
 #   Windows: windows.yml の実行番号（run_id）→ ZIP とインストーラー
 #   Linux:   build.yml の実行番号（linux_run_id）→ タグの版の tar.gz と .sha256
-# 使い方: Actions の「Publish a build」から、実行番号（片方だけでも可）とタグ名（例 v10.0.6-ja.3）を入れて実行する。
-#   gh workflow run publish.yml -f tag=v8.0.9-ja.3 -f run_id=<windows> -f linux_run_id=<build>
-# タグの版（v8.0.9-ja.3 なら 8.0.9）と違う版のファイルは載せない。
+# 使い方: Actions の「Publish a build」から、実行番号（片方だけでも可）とタグ名（例 v10.0.6-plus.11）を入れて実行する。
+#   gh workflow run publish.yml -f tag=v8.0.9-plus.8 -f run_id=<windows> -f linux_run_id=<build>
+# タグの版（v8.0.9-plus.8 なら 8.0.9）と違う版のファイルは載せない。
 on:
   workflow_dispatch:
     inputs:
@@ -18,7 +18,7 @@ on:
         required: false
         default: ""
       tag:
-        description: "リリースのタグ（例 v10.0.6-ja.1）"
+        description: "リリースのタグ（例 v10.0.6-plus.11）"
         required: true
       title:
         description: "リリースの題名（空ならタグ名）"
@@ -49,7 +49,7 @@ jobs:
         run: |
           set -euo pipefail
           ver=${TAG#v}; ver=${ver%%-*}
-          name=kicad-ja-plus-$ver-linux-x86_64
+          name=kicad-plus-$ver-linux-x86_64
           gh run download "${{ inputs.linux_run_id }}" -R "$GITHUB_REPOSITORY" -n "$name" -D out/linux
           (cd out/linux && sha256sum -c "$name.tar.gz.sha256")
       - name: Create the release and upload
@@ -64,7 +64,7 @@ jobs:
           [ -n "$title" ] || title="$TAG"
           ver=${TAG#v}; ver=${ver%%-*}
           win="Windows 版（署名なし）: インストーラーで入れるか、ZIP を展開して bin\\kicad.exe を起動する。SmartScreen が出たら「詳細情報」→「実行」。"
-          lin="Linux 版（Ubuntu 24.04 x86_64）: kicad-ja-plus-$ver-linux-x86_64.tar.gz。本家の KiCad（PPA の同じ系列）を入れてから展開し、bin/ を PATH に入れる（README の「入れ方（Linux）」）。"
+          lin="Linux 版（Ubuntu 24.04 x86_64）: kicad-plus-$ver-linux-x86_64.tar.gz。本家の KiCad（PPA の同じ系列）を入れてから展開し、bin/ を PATH に入れる（README の「入れ方（Linux）」）。"
           gh release view "$TAG" > /dev/null 2>&1 || \
             gh release create "$TAG" --target "${{ github.sha }}" --prerelease --title "$title" \
               --notes "$([ -n "${{ inputs.run_id }}" ] && echo "$win")
@@ -73,7 +73,7 @@ jobs:
           # Windows 版にも Linux 版と同じく .sha256 を付ける
           while IFS= read -r -d '' f; do (cd "$(dirname "$f")" && sha256sum "$(basename "$f")" > "$(basename "$f").sha256"); done < <(find out/windows -type f \( -name '*.exe' -o -name '*.zip' \) -print0 2>/dev/null)
           while IFS= read -r -d '' f; do files+=("$f"); done < <(find out/windows -type f \( -name '*.exe' -o -name '*.zip' -o -name '*.exe.sha256' -o -name '*.zip.sha256' \) -print0 2>/dev/null)
-          while IFS= read -r -d '' f; do files+=("$f"); done < <(find out/linux -type f \( -name "kicad-ja-plus-$ver-linux-x86_64.tar.gz" -o -name "kicad-ja-plus-$ver-linux-x86_64.tar.gz.sha256" \) -print0 2>/dev/null)
+          while IFS= read -r -d '' f; do files+=("$f"); done < <(find out/linux -type f \( -name "kicad-plus-$ver-linux-x86_64.tar.gz" -o -name "kicad-plus-$ver-linux-x86_64.tar.gz.sha256" \) -print0 2>/dev/null)
           [ ${#files[@]} -gt 0 ] || { echo "載せるファイルが無い"; exit 1; }
           printf '載せる: %s\n' "${files[@]}"
           gh release upload "$TAG" --clobber "${files[@]}"

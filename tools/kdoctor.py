@@ -19,7 +19,7 @@ import sys
 from pathlib import Path
 
 HOME = Path(__file__).resolve().parent.parent
-RELEASES = "https://github.com/monyuonyu/kicad-ja-plus/releases/latest"
+RELEASES = "https://github.com/monyuonyu/kicad-plus/releases/latest"
 
 
 def build_dir():

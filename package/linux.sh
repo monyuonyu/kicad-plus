@@ -31,7 +31,7 @@ command -v "$patchelf" >/dev/null || { echo "patchelf が無い（apt install pa
 PBS_URL=https://github.com/astral-sh/python-build-standalone/releases/download/20261013/cpython-3.12.15%2B20261013-x86_64-unknown-linux-gnu-install_only.tar.gz
 PBS_SHA256=5d546fc004fc2435fa142eb8f42ed8de5eb4725963dc22f7e6671014a80eb560
 
-name=kicad-ja-plus-$ver-linux-x86_64
+name=kicad-plus-$ver-linux-x86_64
 dst=$out/$name
 rm -rf "$dst"
 mkdir -p "$dst/build"

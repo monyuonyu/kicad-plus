@@ -109,11 +109,11 @@ jobs:
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: |
           # 展開した物だけで動くか（ビルドの場所を隠して、中身の確かめと回帰試験をもう一度）
-          mkdir -p /tmp/pkg && tar -C /tmp/pkg -xzf dist/kicad-ja-plus-${{ matrix.version }}-linux-x86_64.tar.gz
-          (cd dist && sha256sum -c kicad-ja-plus-${{ matrix.version }}-linux-x86_64.tar.gz.sha256)
+          mkdir -p /tmp/pkg && tar -C /tmp/pkg -xzf dist/kicad-plus-${{ matrix.version }}-linux-x86_64.tar.gz
+          (cd dist && sha256sum -c kicad-plus-${{ matrix.version }}-linux-x86_64.tar.gz.sha256)
           mv "$HOME/src/build-${{ matrix.version }}" "$HOME/src/build.hidden"
           rc=0
-          pkg=/tmp/pkg/kicad-ja-plus-${{ matrix.version }}-linux-x86_64
+          pkg=/tmp/pkg/kicad-plus-${{ matrix.version }}-linux-x86_64
           env -u KICAD_LOCAL_BUILD "$pkg/package/check-linux.sh" "$pkg" "$PWD/shots" || rc=1
           (cd "$pkg" && env -u KICAD_LOCAL_BUILD ${{ matrix.runner }} test/regress.sh) || rc=1
           mv "$HOME/src/build.hidden" "$HOME/src/build-${{ matrix.version }}"
@@ -131,7 +131,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         with:
-          name: kicad-ja-plus-${{ matrix.version }}-linux-x86_64
+          name: kicad-plus-${{ matrix.version }}-linux-x86_64
           path: |
             dist/*.tar.gz
             dist/*.sha256

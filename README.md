@@ -2,7 +2,9 @@
 
 > Translated from [README.ja.md](README.ja.md) (the Japanese version is the original) at commit `fab6b11`.
 
-# kicad-ja-plus — an enhanced KiCad that can work on boards without a GUI
+# kicad-plus — an enhanced KiCad that can work on boards without a GUI
+
+(Formerly **kicad-ja-plus**. The old command names `kicad-local`, `kicad-ja`, `pcbnew-ja` and `eeschema-ja` still work.)
 
 This is KiCad with the additions listed below. It comes in two versions.
 
@@ -20,7 +22,7 @@ What was added:
 
 ## Download
 
-**Latest version: [Releases, Latest](https://github.com/monyuonyu/kicad-ja-plus/releases/latest)** (the recommended 10.0.6 build; the 8.0.9 build that keeps the KiCad 8 format and earlier versions are listed on [Releases](https://github.com/monyuonyu/kicad-ja-plus/releases)).
+**Latest version: [Releases, Latest](https://github.com/monyuonyu/kicad-plus/releases/latest)** (the recommended 10.0.6 build; the 8.0.9 build that keeps the KiCad 8 format and earlier versions are listed on [Releases](https://github.com/monyuonyu/kicad-plus/releases)).
 There are a Windows installer and zip, and a Linux (Ubuntu 24.04) tar.gz; see "Installing" below.
 
 ## What it can do
@@ -96,7 +98,7 @@ No feature that changes the file format is included.
 ## Installing (Linux, prebuilt)
 
 tar.gz files for Ubuntu 24.04 (x86_64; Ubuntu on WSL2 works too) are on the Releases page for both 10.0.6 and 8.0.9
-(`kicad-ja-plus-<version>-linux-x86_64.tar.gz` and `.sha256`).
+(`kicad-plus-<version>-linux-x86_64.tar.gz` and `.sha256`).
 They contain the improved kicad-cli, the GUI (`kicad`, `pcbnew`, `eeschema` and others), the kifaces, the pcbnew Python module, icons,
 translations (Japanese and others), the headless tools, **the Python and Claude Agent SDK for the AI chat (`build/ai-runtime`)**, and **Freerouting with its own Java runtime (`build/freerouting`)**.
 Shared components such as wxWidgets, OpenCASCADE and ngspice, and the part libraries and 3D models, come from the upstream KiCad installed on the system.
@@ -111,11 +113,11 @@ Shared components such as wxWidgets, OpenCASCADE and ngspice, and the part libra
 2. Extract it anywhere and add `bin/` to PATH
 
    ```
-   sha256sum -c kicad-ja-plus-10.0.6-linux-x86_64.tar.gz.sha256
-   tar xzf kicad-ja-plus-10.0.6-linux-x86_64.tar.gz
-   export PATH="$PWD/kicad-ja-plus-10.0.6-linux-x86_64/bin:$PATH"
+   sha256sum -c kicad-plus-10.0.6-linux-x86_64.tar.gz.sha256
+   tar xzf kicad-plus-10.0.6-linux-x86_64.tar.gz
+   export PATH="$PWD/kicad-plus-10.0.6-linux-x86_64/bin:$PATH"
    kicad-plus help
-   kicad-ja-plus-10.0.6-linux-x86_64/package/check-linux.sh   # checks the contents and that things run (tens of seconds)
+   kicad-plus-10.0.6-linux-x86_64/package/check-linux.sh   # checks the contents and that things run (tens of seconds)
    kicad-plus test        # regression tests. If everything is OK, the installation is correct
    ```
 

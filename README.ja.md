@@ -1,6 +1,8 @@
 [English](README.md) | **日本語** | [简体中文](README.zh-CN.md)
 
-# kicad-ja-plus — 画面なしでも基板を扱える KiCad の改良版
+# kicad-plus — 画面なしでも基板を扱える KiCad の改良版
+
+（前の名前は **kicad-ja-plus**。前のコマンド名 `kicad-local`・`kicad-ja`・`pcbnew-ja`・`eeschema-ja` もそのまま使える）
 
 KiCad に、次のものを足したものです。版は 2 つあります。
 
@@ -18,7 +20,7 @@ KiCad に、次のものを足したものです。版は 2 つあります。
 
 ## ダウンロード
 
-**最新版: [Releases の Latest](https://github.com/monyuonyu/kicad-ja-plus/releases/latest)**（10.0.6 のおすすめ版。KiCad 8 形式のまま使う 8.0.9 版と前の版は [Releases](https://github.com/monyuonyu/kicad-ja-plus/releases) の一覧に）。
+**最新版: [Releases の Latest](https://github.com/monyuonyu/kicad-plus/releases/latest)**（10.0.6 のおすすめ版。KiCad 8 形式のまま使う 8.0.9 版と前の版は [Releases](https://github.com/monyuonyu/kicad-plus/releases) の一覧に）。
 Windows のインストーラーと zip、Linux（Ubuntu 24.04）の tar.gz があります。入れ方は下の「入れ方」を。
 
 ## できること
@@ -91,7 +93,7 @@ kicad-plus review 新しい版 前の版 --out 確認/        # ERC・DRC・3D�
 ## 入れ方（Linux、ビルド済み）
 
 Ubuntu 24.04（x86_64。WSL2 の Ubuntu も可）向けの tar.gz を、リリースに 10.0.6 と 8.0.9 の両方置いています
-（`kicad-ja-plus-<版>-linux-x86_64.tar.gz` と `.sha256`）。
+（`kicad-plus-<版>-linux-x86_64.tar.gz` と `.sha256`）。
 中身は改良した kicad-cli・画面（`kicad`・`pcbnew`・`eeschema` ほか）・kiface・pcbnew の Python モジュール・アイコン・翻訳（日本語ほか）・
 画面なしの道具、それに **AI チャット用の Python と Claude Agent SDK（`build/ai-runtime`）**、**Freerouting とそれ専用の Java（`build/freerouting`）** です。
 wxWidgets・OpenCASCADE・ngspice などの共通の部品と、部品ライブラリ・3D モデルは、システムに入れた本家の KiCad を使います。
@@ -106,11 +108,11 @@ wxWidgets・OpenCASCADE・ngspice などの共通の部品と、部品ライブ�
 2. 好きな場所に展開して、`bin/` を PATH に入れる
 
    ```
-   sha256sum -c kicad-ja-plus-10.0.6-linux-x86_64.tar.gz.sha256
-   tar xzf kicad-ja-plus-10.0.6-linux-x86_64.tar.gz
-   export PATH="$PWD/kicad-ja-plus-10.0.6-linux-x86_64/bin:$PATH"
+   sha256sum -c kicad-plus-10.0.6-linux-x86_64.tar.gz.sha256
+   tar xzf kicad-plus-10.0.6-linux-x86_64.tar.gz
+   export PATH="$PWD/kicad-plus-10.0.6-linux-x86_64/bin:$PATH"
    kicad-plus help
-   kicad-ja-plus-10.0.6-linux-x86_64/package/check-linux.sh   # 中身と動作の確かめ（数十秒）
+   kicad-plus-10.0.6-linux-x86_64/package/check-linux.sh   # 中身と動作の確かめ（数十秒）
    kicad-plus test        # 回帰試験。全部 OK なら入れ方は正しい
    ```
 

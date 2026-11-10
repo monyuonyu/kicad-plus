@@ -6,9 +6,10 @@
                         [--rip-up] [--jar freerouting.jar] [--json]
 
 流れ: 元の基板の未配線を数える → DSN に書き出す → Freerouting（画面なし）→ SES を取り込む →
-      ベタを塗り直す → 出力に保存（入力は変えない）→ 出力を DRC にかけ、未配線と新しく増えた違反を出す。
+      ベタを塗り直す → 片端がどこにもつながらない配線の切れ端を消す → 出力に保存（入力は変えない）→ 出力を DRC にかけ、未配線と新しく増えた違反を出す。
 
   --rip-up   既存の配線とビアを剥がしてから配線し直す（既定は、今ある配線を残して足りない所だけ）
+  --keep-stubs  切れ端を消さない（既定は消す。Freerouting はパッドの手前で止まった短い配線を残すことがある）
   --jar      Freerouting の jar（既定: 環境変数 FREEROUTING_JAR → 配布版に同梱の <build>/freerouting/freerouting.jar
              → ~/.local/share/kicad-ja-plus/freerouting.jar ほか）
              入手先: https://github.com/freerouting/freerouting/releases （Java 25 以降が要る）
@@ -73,6 +74,39 @@ def types(d):
     return collections.Counter(v["type"] for v in d.get("violations", []) if v["type"] not in NOISE)
 
 
+def in_zone(board, via):
+    """同じネットのベタの中のビア（つなぎ・放熱のビア）は、片面だけでも残す"""
+    for z in board.Zones():
+        if z.GetNetCode() != via.GetNetCode():
+            continue
+        for layer in z.GetLayerSet().Seq():
+            if via.IsOnLayer(layer) and z.HitTestFilledArea(layer, via.GetPosition()):
+                return True
+    return False
+
+
+def remove_stubs(board, rounds=20):
+    """片端がつながらない配線（切れ端）と、1 つの層にしかつながらないビアを消す。消すと次の切れ端が出るので、出なくなるまで繰り返す。
+    つながりの判定は KiCad の TestTrackEndpointDangling（パッド・ビア・ほかの配線・ベタ）。
+    返り値: [{"net", "layer", "length_mm", "x", "y"}]"""
+    removed = []
+    for _ in range(rounds):
+        board.BuildConnectivity()
+        con = board.GetConnectivity()
+        dead = [t for t in board.GetTracks() if con.TestTrackEndpointDangling(t, False)
+                and not (isinstance(t, pcbnew.PCB_VIA) and in_zone(board, t))]
+        if not dead:
+            break
+        for t in dead:
+            via = isinstance(t, pcbnew.PCB_VIA)
+            p = t.GetPosition() if via else t.GetStart()
+            removed.append({"net": t.GetNetname(), "layer": "via" if via else t.GetLayerName(),
+                            "length_mm": 0 if via else round(pcbnew.ToMM(t.GetLength()), 3),
+                            "x": round(pcbnew.ToMM(p.x), 3), "y": round(pcbnew.ToMM(p.y), 3)})
+            board.Remove(t)
+    return removed
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0], formatter_class=argparse.RawDescriptionHelpFormatter,
                                  epilog=__doc__.split("\n", 2)[2])
@@ -82,6 +116,7 @@ def main():
     ap.add_argument("--timeout", type=int, default=600)
     ap.add_argument("--threads", type=int)
     ap.add_argument("--rip-up", action="store_true")
+    ap.add_argument("--keep-stubs", action="store_true")
     ap.add_argument("--jar")
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args()
@@ -138,6 +173,9 @@ def main():
         return 2
     board.BuildListOfNets()
     pcbnew.ZONE_FILLER(board).Fill(board.Zones())
+    stubs = [] if a.keep_stubs else remove_stubs(board)
+    if stubs:
+        pcbnew.ZONE_FILLER(board).Fill(board.Zones())
     pcbnew.SaveBoard(str(dst), board)
     pro = src.with_suffix(".kicad_pro")
     if pro.exists() and not dst.with_suffix(".kicad_pro").exists():
@@ -149,7 +187,7 @@ def main():
     vias = sum(1 for t in board.GetTracks() if isinstance(t, pcbnew.PCB_VIA))
     res = {"input": str(src), "output": str(dst), "jar": str(jar), "java": java, "unconnected_before": len(before.get("unconnected_items", [])),
            "unconnected_after": len(after.get("unconnected_items", [])), "tracks": tracks, "vias": vias,
-           "ripped": ripped, "new_violations": dict(new_types), "timed_out": timed_out, "log": str(log),
+           "ripped": ripped, "stubs_removed": stubs, "new_violations": dict(new_types), "timed_out": timed_out, "log": str(log),
            "unconnected": [" ⇔ ".join(i.get("description", "") for i in v.get("items", [])[:2])
                            for v in after.get("unconnected_items", [])]}
     res["ok"] = res["unconnected_after"] == 0 and not new_types
@@ -159,6 +197,9 @@ def main():
     else:
         print(f"未配線 {res['unconnected_before']} → {res['unconnected_after']}、配線 {tracks} 本・ビア {vias} 個"
               + (f"（剥がした {ripped}）" if ripped else "") + (f"、時間切れ（{a.timeout} 秒）" if timed_out else ""))
+        if stubs:
+            print(f"  切れ端を消した: {len(stubs)} 本（" + "、".join(f"{x['net'] or '-'} {x['length_mm']}mm"
+                                                           for x in stubs[:6]) + ("…" if len(stubs) > 6 else "") + "）")
         for u in res["unconnected"][:10]:
             print(f"  残った: {u}")
         for t, n in new_types.items():

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-kfab: 発注前の確認と、基板屋への入稿データ(kicad-local fab。2026-10-29)
+kfab: 発注前の確認と、基板屋への入稿データ(kicad-plus fab。2026-10-29)
 
-  kicad-local fab <基板.kicad_pcb> [-o 入稿.zip] [--name brake] [--paste] [--check-only] [--force] [--json]
+  kicad-plus fab <基板.kicad_pcb> [-o 入稿.zip] [--name brake] [--paste] [--check-only] [--force] [--json]
 
   1. 発注前の確認(どれか引っかかれば zip は作らず終了コード 1。--force で作る)
      - 製造データの出力設定のドリルマーク(drillshape)が「なし」でない(穴の位置に印が入ったガーバーになる)
-     - DRC の要確認(違反・未配線・回路図との不一致。kicad-local drc と同じ数え方)
+     - DRC の要確認(違反・未配線・回路図との不一致。kicad-plus drc と同じ数え方)
      - 基板の外形(Edge.Cuts)が無い
   2. ガーバー(銅箔の全層・レジスト・シルク・外形。--paste でペースト。ドリルマークなし)と、ドリル(Excellon、mm、
      めっき穴とめっき無しの穴を 1 つにまとめる)を書き、要る層がそろっているかを確かめて zip に
@@ -27,7 +27,7 @@ sys.path.insert(0, str(HERE))
 
 def cli():
     paths = os.environ.get("PATH", "").split(os.pathsep)
-    return "kicad-cli-local" if any((Path(p) / "kicad-cli-local").exists() for p in paths) else "kicad-cli"
+    return "kicad-cli-plus" if any((Path(p) / "kicad-cli-plus").exists() for p in paths) else "kicad-cli"
 
 
 def plot_params(text):
@@ -60,7 +60,7 @@ def checks(board, text):
             if d.get("unconnected_items"):
                 kinds["未配線"] = len(d["unconnected_items"])
             found.append({"kind": "drc", "message": f"DRC の要確認 {d['problems']} 件: "
-                          + "、".join(f"{k} {n}" for k, n in sorted(kinds.items())) + "(kicad-local drc で場所を)"})
+                          + "、".join(f"{k} {n}" for k, n in sorted(kinds.items())) + "(kicad-plus drc で場所を)"})
     return found
 
 
@@ -112,7 +112,7 @@ def make(board, out, paste=False, name=None):
 
 
 def main():
-    ap = argparse.ArgumentParser(prog="kicad-local fab", description=__doc__.split("\n")[1],
+    ap = argparse.ArgumentParser(prog="kicad-plus fab", description=__doc__.split("\n")[1],
                                  formatter_class=argparse.RawDescriptionHelpFormatter, epilog=__doc__.split("\n", 2)[2])
     ap.add_argument("board")
     ap.add_argument("-o", "--output")

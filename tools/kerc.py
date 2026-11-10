@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""kicad-local erc: ERC を回して要点を出す
+"""kicad-plus erc: ERC を回して要点を出す
 
 使い方:
-  kicad-local erc <回路図.kicad_sch> [--json]
+  kicad-plus erc <回路図.kicad_sch> [--json]
 
 終了コード: 0 = 要確認の項目なし、1 = あり、2 = 使い方の誤り・ERC を実行できない
 ライブラリとの差分（lib_symbol_issues など）は参考として数えない。
@@ -69,8 +69,8 @@ def schematic_index(sch):
 
 
 def pin_nets(sch):
-    """{(参照, ピン番号): ネット名}（kicad-local netlist から。取れなければ空）"""
-    tool = Path(__file__).resolve().parent.parent / "bin" / "kicad-local"
+    """{(参照, ピン番号): ネット名}（kicad-plus netlist から。取れなければ空）"""
+    tool = Path(__file__).resolve().parent.parent / "bin" / "kicad-plus"
     try:
         r = subprocess.run([str(tool), "netlist", str(sch), "--json"], capture_output=True, text=True, timeout=120)
         d = json.loads(r.stdout)
@@ -129,7 +129,7 @@ def main():
         return 2
     out = Path(tempfile.mkdtemp()) / "erc.json"
     env = dict(os.environ, LANG="C.UTF-8", LC_ALL="C.UTF-8", LANGUAGE="")  # 項目の説明を英語で（照合のため）
-    r = subprocess.run(["kicad-cli-local", "sch", "erc", "--format", "json", "-o", str(out), str(sch)],
+    r = subprocess.run(["kicad-cli-plus", "sch", "erc", "--format", "json", "-o", str(out), str(sch)],
                        capture_output=True, text=True, env=env)
     if not out.exists():
         sys.stderr.write(f"ERC を実行できない: {sch}\n{r.stdout}{r.stderr}")

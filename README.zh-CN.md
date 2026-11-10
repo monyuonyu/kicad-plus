@@ -25,37 +25,37 @@
 
 ## 功能
 
-入口只有一个：`kicad-local`（`kicad-local help` 会列出命令）。
+入口只有一个：`kicad-plus`（`kicad-plus help` 会列出命令）。
 
 ```
-kicad-local drc 基板.kicad_pcb            # DRC 要点（按类型的数量和位置）
-kicad-local erc 回路図.kicad_sch
-kicad-local lint 回路図.kicad_sch          # 偏离设计惯例之处（外部线路的保护、基极电阻、电源电容……）
-kicad-local render 基板.kicad_pcb iso      # 无图形界面生成 3D 图像
-kicad-local render 基板.kicad_pcb top,bottom,iso-hq   # 用逗号列出多个视角，一次生成（<板名>_<视角>.png，显示每个视角的耗时）
-kicad-local step 基板.kicad_pcb --placeholder-boxes   # STEP；列出没有 3D 模型的元件，并用外形方块代替（高度取自 Height 字段）
-kicad-local stats 基板.kicad_pcb           # 元件数、孔径等
-kicad-local netlist 回路図.kicad_sch --json   # 以 JSON 输出网表（元件、字段、引脚编号/名称/类型、网络及其节点）；电路板则取自焊盘的网络
-kicad-local drc 基板.kicad_pcb --strict    # 另外检查 DRC 即使“0 违规”也会漏掉的 3 项（无网络的焊盘、比网络类更细的走线、过期的铺铜）
-kicad-local why 基板.kicad_pcb             # 对每一对未布线连接，按层说明“为什么布不通”（禁布区、其他网络的铜、板框）
-kicad-local view 基板.kicad_pcb --drc --net GND   # 生成带注释的 2D 图（高亮网络、为 DRC 违规编号）
-kicad-local autoroute 入力.kicad_pcb 出力.kicad_pcb   # 用 Freerouting 对整板自动布线，并重新填充铺铜、运行 DRC
-kicad-local finish outline|zone|stitch|islands|widen 入力 出力 ...   # 板框、铺铜、缝合过孔、去除孤岛、按电流加宽走线
+kicad-plus drc 基板.kicad_pcb            # DRC 要点（按类型的数量和位置）
+kicad-plus erc 回路図.kicad_sch
+kicad-plus lint 回路図.kicad_sch          # 偏离设计惯例之处（外部线路的保护、基极电阻、电源电容……）
+kicad-plus render 基板.kicad_pcb iso      # 无图形界面生成 3D 图像
+kicad-plus render 基板.kicad_pcb top,bottom,iso-hq   # 用逗号列出多个视角，一次生成（<板名>_<视角>.png，显示每个视角的耗时）
+kicad-plus step 基板.kicad_pcb --placeholder-boxes   # STEP；列出没有 3D 模型的元件，并用外形方块代替（高度取自 Height 字段）
+kicad-plus stats 基板.kicad_pcb           # 元件数、孔径等
+kicad-plus netlist 回路図.kicad_sch --json   # 以 JSON 输出网表（元件、字段、引脚编号/名称/类型、网络及其节点）；电路板则取自焊盘的网络
+kicad-plus drc 基板.kicad_pcb --strict    # 另外检查 DRC 即使“0 违规”也会漏掉的 3 项（无网络的焊盘、比网络类更细的走线、过期的铺铜）
+kicad-plus why 基板.kicad_pcb             # 对每一对未布线连接，按层说明“为什么布不通”（禁布区、其他网络的铜、板框）
+kicad-plus view 基板.kicad_pcb --drc --net GND   # 生成带注释的 2D 图（高亮网络、为 DRC 违规编号）
+kicad-plus autoroute 入力.kicad_pcb 出力.kicad_pcb   # 用 Freerouting 对整板自动布线，并重新填充铺铜、运行 DRC
+kicad-plus finish outline|zone|stitch|islands|widen 入力 出力 ...   # 板框、铺铜、缝合过孔、去除孤岛、按电流加宽走线
 
 # 移动元件并布线（步骤也可从标准输入给出）
-kicad-local route 基板.kicad_pcb 出力.kicad_pcb - --instructions 手順.md <<'EOF'
+kicad-plus route 基板.kicad_pcb 出力.kicad_pcb - --instructions 手順.md <<'EOF'
 findspace R10 0.25                  # 可放置位置的候选
 drag R10 1,0                        # 移动后，相连的走线会绕行重布，丝印文字也会避让
 autoroute R10.2 C5.1                # 自动寻找最多 1 个过孔的路径
 check                               # 当场运行 DRC
 EOF
 
-kicad-local sch 入力.kicad_sch 出力.kicad_sch 手順   # 无图形界面修改原理图（保存后检查连接和 BOM 的差异、ERC）
-kicad-local pcbsync 回路図 基板 出力                # 将原理图的修改同步到电路板
-kicad-local pcb update-from-schematic --dry-run --json 基板.kicad_pcb   # 同上，kicad-cli 风格；--dry-run 只报告变化，实际写入后再做 DRC 一致性检查
-kicad-local fabdiff 前.kicad_pcb 後.kicad_pcb 比較/  # 逐层比较生产数据，输出差异图像和位置列表
-kicad-local sim run 手順.toml --out 結果/            # 从原理图自动生成 SPICE 并仿真（ngspice）
-kicad-local review 新しい版 前の版 --out 確認/        # 一次完成 ERC、DRC、3D、差异和仿真 → 報告.md（报告）
+kicad-plus sch 入力.kicad_sch 出力.kicad_sch 手順   # 无图形界面修改原理图（保存后检查连接和 BOM 的差异、ERC）
+kicad-plus pcbsync 回路図 基板 出力                # 将原理图的修改同步到电路板
+kicad-plus pcb update-from-schematic --dry-run --json 基板.kicad_pcb   # 同上，kicad-cli 风格；--dry-run 只报告变化，实际写入后再做 DRC 一致性检查
+kicad-plus fabdiff 前.kicad_pcb 後.kicad_pcb 比較/  # 逐层比较生产数据，输出差异图像和位置列表
+kicad-plus sim run 手順.toml --out 結果/            # 从原理图自动生成 SPICE 并仿真（ngspice）
+kicad-plus review 新しい版 前の版 --out 確認/        # 一次完成 ERC、DRC、3D、差异和仿真 → 報告.md（报告）
 ```
 
 加上 `--instructions` 后，还会输出一份操作说明，让人可以在 KiCad 图形界面中重现相同的操作。
@@ -111,21 +111,21 @@ wxWidgets、OpenCASCADE、ngspice 等公共组件以及元件库、3D 模型，�
    sha256sum -c kicad-ja-plus-10.0.6-linux-x86_64.tar.gz.sha256
    tar xzf kicad-ja-plus-10.0.6-linux-x86_64.tar.gz
    export PATH="$PWD/kicad-ja-plus-10.0.6-linux-x86_64/bin:$PATH"
-   kicad-local help
+   kicad-plus help
    kicad-ja-plus-10.0.6-linux-x86_64/package/check-linux.sh   # 检查内容和运行情况（几十秒）
-   kicad-local test        # 回归测试。全部 OK 即说明安装正确
+   kicad-plus test        # 回归测试。全部 OK 即说明安装正确
    ```
 
-3. 图形界面用 `pcbnew-ja`（PCB 编辑器）、`eeschema-ja`（原理图编辑器）、`kicad-ja`（项目管理器）启动
+3. 图形界面用 `pcbnew-plus`（PCB 编辑器）、`eeschema-plus`（原理图编辑器）、`kicad-plus-gui`（项目管理器）启动
    （WSL2 中通过 WSLg 显示）。在 Python 中：`kicad-python -c "import pcbnew; print(pcbnew.Version())"`。
 
-- 如果系统中从未启动过 KiCad，请先启动一次 `kicad-ja` 或上游的 `kicad`，完成初始设置（库表）。
+- 如果系统中从未启动过 KiCad，请先启动一次 `kicad-plus-gui` 或上游的 `kicad`，完成初始设置（库表）。
 - `bin/` 中的入口会自动使用解压目录中的 `build/`。若从其他位置的 `bin/`（例如 git 克隆的本仓库）使用，
   请设置 `export KICAD_LOCAL_BUILD=<解压目录>/build`。
 - 如果上游 KiCad 是其他系列（例如 10.0.6 版配 KiCad 8 的 PPA），请用 `sudo apt install $(cat DEPENDS-apt.txt)` 安装缺少的公共组件。
-  不过 `kicad-local test` 等会与系统的 `kicad-cli` 比较，系列不同时会失败。
+  不过 `kicad-plus test` 等会与系统的 `kicad-cli` 比较，系列不同时会失败。
 
-整板自动布线（`kicad-local autoroute`）所用的 [Freerouting](https://github.com/freerouting/freerouting) 2.4.1（GPL-3.0）
+整板自动布线（`kicad-plus autoroute`）所用的 [Freerouting](https://github.com/freerouting/freerouting) 2.4.1（GPL-3.0）
 以及仅用于运行它的最小 Java（由 Temurin 25 经 jlink 生成）也已附带（`build/freerouting/`，来源与许可证见其中的 README.txt）。
 没有安装 Java 的环境也能直接使用。若要使用其他 jar 或 java，请用 `--jar`、`FREEROUTING_JAR`、`FREEROUTING_JAVA` 指定。
 Windows 版在 `<KiCad>\freerouting\` 中也有相同内容，可用 `<KiCad>\bin\freerouting.cmd`（开始菜单中的 Freerouting）启动。
@@ -162,7 +162,7 @@ Windows 版在 `<KiCad>\freerouting\` 中也有相同内容，可用 `<KiCad>\bi
 
    ```
    export PATH="$PWD/bin:$PATH"
-   kicad-local help
+   kicad-plus help
    ```
 
    构建目录用 `KICAD_LOCAL_BUILD` 指定（默认为 `~/src/build-10.0.6`；8.0.9 则为 `export KICAD_LOCAL_BUILD=~/src/build-8.0.9`）。
@@ -172,7 +172,7 @@ Windows 版在 `<KiCad>\freerouting\` 中也有相同内容，可用 `<KiCad>\bi
 ## 测试
 
 ```
-kicad-local test        # = test/regress.sh（几十秒）
+kicad-plus test        # = test/regress.sh（几十秒）
 ```
 
 使用 KiCad 8.0.9 自带的演示电路板（pic_programmer）和原理图（interf_u）运行布线步骤，将结果与基准（`test/baseline/`）比较，
@@ -184,7 +184,7 @@ kicad-local test        # = test/regress.sh（几十秒）
 |---|---|
 | `patches/10.0.6/` | 针对 KiCad 10.0.6 的改进（按编号排列的补丁；上游的 MR 带有作者姓名） |
 | `patches/8.0.9/` | 针对 KiCad 8.0.9 的改进。`ALL-combined.patch` 是全部合并后的补丁，带编号的补丁是历史记录 |
-| `bin/` | 入口（`kicad-local`、`kicad-route`、`kicad-gerber`、`kicad-cli-local`、`kicad-python`）及图形界面启动（`pcbnew-ja`、`eeschema-ja`、`kicad-ja`） |
+| `bin/` | 入口（`kicad-plus`、`kicad-route`、`kicad-gerber`、`kicad-cli-plus`、`kicad-python`）及图形界面启动（`pcbnew-plus`、`eeschema-plus`、`kicad-plus-gui`） |
 | `tools/` | Python 工具（review、lint、sch、sim、pcbsync、silkfix 等） |
 | `test/` | 回归测试 |
 | `package/` | 制作发行包的脚本（`linux.sh`：从构建目录生成 tar.gz；`check-linux.sh`：检查解压后的包） |

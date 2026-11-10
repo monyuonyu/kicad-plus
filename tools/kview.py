@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""kicad-local view: 基板の 2D の図を、注釈つきで画像にする（画面なし。pcbnew を使う。kicad-python で動かす）
+"""kicad-plus view: 基板の 2D の図を、注釈つきで画像にする（画面なし。pcbnew を使う。kicad-python で動かす）
 
 使い方:
-  kicad-local view <基板.kicad_pcb> [-o 出力.png] [--net 名前 ...] [--drc] [--ref] [--layers F.Cu,B.Cu]
+  kicad-plus view <基板.kicad_pcb> [-o 出力.png] [--net 名前 ...] [--drc] [--ref] [--layers F.Cu,B.Cu]
                    [--region x0,y0,x1,y1] [--size 1600] [--json]
 
   --net      そのネットを明るく太く描き、ほかを薄くする（何度でも。* ? のワイルドカード可）
@@ -50,7 +50,7 @@ def mm(v):
 
 def run_drc(path):
     out = Path(tempfile.mkdtemp()) / "drc.json"
-    subprocess.run(["kicad-cli-local", "pcb", "drc", "--format", "json", "-o", str(out), str(path)],
+    subprocess.run(["kicad-cli-plus", "pcb", "drc", "--format", "json", "-o", str(out), str(path)],
                    capture_output=True, text=True)
     return json.loads(out.read_text(encoding="utf-8")) if out.exists() else {}
 

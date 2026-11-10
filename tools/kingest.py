@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-kicad-local ingest: 別の道具（Zener・tscircuit・SKiDL など）が作った回路図と基板を、KiCad で仕上げられる形に
+kicad-plus ingest: 別の道具（Zener・tscircuit・SKiDL など）が作った回路図と基板を、KiCad で仕上げられる形に
 そろえる（画面なし。kicad-python で動かす。入力は変えない）
 
-  kicad-local ingest <回路図.kicad_sch> <基板.kicad_pcb> --out <出力.kicad_pcb> [--intent intent.json] [--place] [--json]
+  kicad-plus ingest <回路図.kicad_sch> <基板.kicad_pcb> --out <出力.kicad_pcb> [--intent intent.json] [--place] [--json]
 
 出力の基板の隣に、同じ名前の回路図（.kicad_sch。下の階層のシートも）とプロジェクト（.kicad_pro）を置く。
 やること:
@@ -37,14 +37,14 @@ import kintent  # noqa: E402
 import knetlist  # noqa: E402
 import sx  # noqa: E402
 
-KL = str(HERE.parent / "bin" / "kicad-local")
+KL = str(HERE.parent / "bin" / "kicad-plus")
 FPLIB = Path("/usr/share/kicad/footprints")
 TEMPLATE_PRO = Path("/usr/share/kicad/template/kicad.kicad_pro")
 GRID = 2.54
 
 
 def run_json(args, timeout=600):
-    """kicad-local の命令を --json で。（終了コード, 結果 or None, 出力の文字）"""
+    """kicad-plus の命令を --json で。（終了コード, 結果 or None, 出力の文字）"""
     r = subprocess.run([KL] + args + ["--json"], capture_output=True, text=True, timeout=timeout)
     try:
         return r.returncode, json.loads(r.stdout), r.stderr
@@ -344,7 +344,7 @@ def check_placement(b, intent):
         if why:
             row["why"] = "、".join(why)
             if "edge" in r and edge is not None:
-                row["hint"] = f"kicad-local route で {ref} を縁へ動かす（findspace / drag）"
+                row["hint"] = f"kicad-plus route で {ref} を縁へ動かす（findspace / drag）"
         out.append(row)
     return out
 
@@ -413,7 +413,7 @@ def place_on_edges(out, b, rows):
                 break
         if best is None:
             rec.update(ok=False, why="縁に沿った帯に、今の向きのまま置ける空きが無い" if ran
-                       else "kicad-route を動かせない（改良版のビルドが要る。kicad-local doctor）")
+                       else "kicad-route を動かせない（改良版のビルドが要る。kicad-plus doctor）")
             done.append(rec)
             continue
         tmp = out.with_name(out.stem + ".ingest-tmp.kicad_pcb")
@@ -477,7 +477,7 @@ def check_parts(sch, pcb, b):
 # ---------------------------------------------------------------- 本体
 
 def main():
-    ap = argparse.ArgumentParser(prog="kicad-local ingest", description=__doc__.split("\n")[1],
+    ap = argparse.ArgumentParser(prog="kicad-plus ingest", description=__doc__.split("\n")[1],
                                  formatter_class=argparse.RawDescriptionHelpFormatter, epilog=__doc__.split("\n", 3)[3])
     ap.add_argument("schematic")
     ap.add_argument("board")

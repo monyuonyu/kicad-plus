@@ -1,9 +1,9 @@
 # ksim: KiCad の回路図から ngspice シミュレーション
 
 ```
-kicad-local sim run  <手順.toml> [--out 出力フォルダ] [--runs N]
-kicad-local sim nets <回路図.kicad_sch>      # ネット名と、つながる端子(役割つき)
-kicad-local sim parts --sch <回路図>          # 部品がどう SPICE 化されるか / されないか
+kicad-plus sim run  <手順.toml> [--out 出力フォルダ] [--runs N]
+kicad-plus sim nets <回路図.kicad_sch>      # ネット名と、つながる端子(役割つき)
+kicad-plus sim parts --sch <回路図>          # 部品がどう SPICE 化されるか / されないか
 ```
 
 - 回路図 → `kicad-cli sch export netlist`(端子の役割つき)→ 部品ごとに SPICE の素子を自動で作る。
@@ -38,7 +38,7 @@ kicad-local sim parts --sch <回路図>          # 部品がどう SPICE 化さ�
   定格が未確認でも NG(終了コード 1)にする。
 
 モデルの置き場(`map.toml`・`ratings.toml`・`base.lib`)は既定でこの道具の `models/`。自分で足したモデルのある別の置き場
-(入れた版の kicad-local-tools の models など)を使うときは `KSIM_MODELS=フォルダ`。`[models] include` の `models/x.lib` は
+(入れた版の kicad-plus の tools/ の models など)を使うときは `KSIM_MODELS=フォルダ`。`[models] include` の `models/x.lib` は
 手順のフォルダ → `KSIM_MODELS` → この道具の順に探し、実際に読んだ場所を結果.md の「モデル」に出す。
 
 モデルの対応表(値 → モデル)は `models/map.toml`。手順ファイルの `[models] map` で上書きできる。

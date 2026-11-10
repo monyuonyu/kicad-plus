@@ -59,7 +59,7 @@ java=$dst/jre/bin/java$exe
 jver=$("$java" -version 2>&1 | head -1 | tr -d '\r')
 
 cat > "$dst/README.txt" <<EOF
-Freerouting $FR_VER（全体の自動配線。kicad-local autoroute が使う）
+Freerouting $FR_VER（全体の自動配線。kicad-plus autoroute が使う）
 
 - freerouting.jar: $FR_URL
   sha256 $FR_SHA256

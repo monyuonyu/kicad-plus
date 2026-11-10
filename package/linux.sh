@@ -159,7 +159,7 @@ if [ -f "$req" ] && [ "${KJP_AI_RUNTIME:-auto}" != skip ]; then
   "$claude" --version
 fi
 
-# ---- Freerouting（全体の自動配線）と、それだけを動かす最小の Java。置き場は <build>/freerouting（kicad-local autoroute が探す）
+# ---- Freerouting（全体の自動配線）と、それだけを動かす最小の Java。置き場は <build>/freerouting（kicad-plus autoroute が探す）
 # jlink のできる JDK 25 以降が要る（KJP_JDK か JAVA_HOME）。KJP_FREEROUTING=skip で入れない
 if [ "${KJP_FREEROUTING:-auto}" != skip ]; then
   FR_CACHE=$out/.cache "$here/package/freerouting.sh" "$dst/build/freerouting" "${KJP_JDK:-${JAVA_HOME:-}}"

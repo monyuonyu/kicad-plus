@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""kicad-local drc: DRC を回して要点を出す（KiCad 8 と 10 の基板に対応）
+"""kicad-plus drc: DRC を回して要点を出す（KiCad 8 と 10 の基板に対応）
 
 使い方:
-  kicad-local drc <基板.kicad_pcb> [--refill] [--strict] [--json]
+  kicad-plus drc <基板.kicad_pcb> [--refill] [--strict] [--json]
 
   --refill   ベタを塗り直してから調べる（基板のファイルは変えない）
   --strict   KiCad の DRC が「違反 0」でも見逃す次の 3 つも調べる（--refill も付く）
@@ -45,7 +45,7 @@ TOL_MM = 0.0005   # 幅の比べ方の許容（丸め）
 def run_drc(board, refill):
     """kicad-cli の DRC を JSON で。refill ならベタを塗り直してから（基板は保存しない）"""
     out = Path(tempfile.mkdtemp()) / "drc.json"
-    cmd = ["kicad-cli-local", "pcb", "drc", "--schematic-parity", "--format", "json", "-o", str(out)]
+    cmd = ["kicad-cli-plus", "pcb", "drc", "--schematic-parity", "--format", "json", "-o", str(out)]
     if refill:
         cmd.append("--refill-zones")
     r = subprocess.run(cmd + [str(board)], capture_output=True, text=True)
@@ -329,7 +329,7 @@ def main():
         m = re.search(r"\(pcbplotparams.*?\(drillshape\s+(\d+)\)", board.read_text(encoding="utf-8"), re.S)
         if m and m.group(1) != "0":
             print(f"参考: 製造データの出力設定でドリルマークが「あり」(drillshape {m.group(1)})。このままガーバーを出すと"
-                  "穴の位置に印が入る(入稿データは kicad-local fab で。ドリルマークなしで出し、発注前の確認もする)")
+                  "穴の位置に印が入る(入稿データは kicad-plus fab で。ドリルマークなしで出し、発注前の確認もする)")
     return 0 if problems == 0 else 1
 
 

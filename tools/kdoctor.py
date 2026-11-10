@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-kdoctor: この環境で kicad-local のどの命令が使えるかを調べる
+kdoctor: この環境で kicad-plus のどの命令が使えるかを調べる
 
-  kicad-local doctor [--json]
+  kicad-plus doctor [--json]
 
 改良版のビルド（配布版の build/ か KICAD_LOCAL_BUILD）があれば全部の命令が使える。無ければ本家の
 KiCad（kicad-cli と Python の pcbnew）で動く範囲に自動で切り替わり、ビルドが要る命令（route・
@@ -50,8 +50,8 @@ def check():
     }
     sys_cli = shutil.which("kicad-cli")
     info = {"build": str(b), "mode": "build" if have["build_cli"] else ("system" if sys_cli else "none")}
-    # kicad-cli: the one kicad-local uses
-    rc, out = run([str(HOME / "bin" / "kicad-cli-local"), "version"])
+    # kicad-cli: the one kicad-plus uses
+    rc, out = run([str(HOME / "bin" / "kicad-cli-plus"), "version"])
     info["kicad_cli"] = out.splitlines()[-1] if rc == 0 and out else None
     info["system_kicad_cli"] = sys_cli
     # pcbnew from Python, as kicad-python gives it
@@ -95,7 +95,7 @@ def commands(info, have):
         ("render・step", kicad, "kicad-cli"),
         ("route（配線・部品の移動・findspace・drag・silk）", have["build_route"], need_build),
         ("gerber（ガーバーの情報と差分）", have["build_gerber"], need_build),
-        ("画面（kicad-ja・pcbnew-ja・eeschema-ja）", have["build_gui"], need_build),
+        ("画面（kicad-plus-gui・pcbnew-plus・eeschema-plus）", have["build_gui"], need_build),
         ("sim（ngspice）", info["ngspice"] is not None and info["numpy"], "libngspice と numpy"),
         ("bom のデータシート読み", info["pdftotext"] is not None, "pdftotext（poppler-utils）"),
     ]
@@ -103,7 +103,7 @@ def commands(info, have):
 
 
 def main():
-    ap = argparse.ArgumentParser(prog="kicad-local doctor", description=__doc__.split("\n")[1])
+    ap = argparse.ArgumentParser(prog="kicad-plus doctor", description=__doc__.split("\n")[1])
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args()
     info, have = check()

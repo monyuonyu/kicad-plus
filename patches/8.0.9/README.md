@@ -2,7 +2,7 @@
 
 ソース: ~/src/kicad-8.0.9（GitHub 公式ミラーの 8.0.9 タグ）／ビルド: $KICAD_LOCAL_BUILD
 ファイル形式は 8.0 のまま（KiCad 8 と互換）。取り込むたびに ~/src/route-test/regress.sh と
-kicad-cli-local の DRC/ERC をシステム版と突き合わせて確認する。
+kicad-cli-plus の DRC/ERC をシステム版と突き合わせて確認する。
 
 | 番号 | 内容 | 出どころ | 確認 |
 |---|---|---|---|
@@ -14,7 +14,7 @@ kicad-cli-local の DRC/ERC をシステム版と突き合わせて確認する�
 | 05 | `kicad-cli pcb export stats`（基板の統計。テキスト/JSON） | KiCad 10（f827982ca の版を移植。PRESSFIT 行は除外、ビア種別は BLIND_BURIED に統合、子要素の走査を明示化） | 部品・パッド・ビア・穴径ごとの数をシステムの pcbnew と突き合わせて一致 |
 | 06 | `kicad-cli pcb render`（画面なしの 3D レイトレース画像。PNG/JPEG、視点・回転・ズーム・高画質・床と影） | KiCad 9（f6f0b9a66 の job/CLI）＋ master a9ce9da55（`--rotate -45,0,45` の前処理） | 試験用の基板で上面・斜め・底面を描画。3D モデル表示には s3d_plugin_vrml/oce/idf のビルドが必要 |
 | 07 | kicad-route の使い勝手: help / info / check(その場で DRC、未配線と違反を分けて表示) / silk / 標準入力 / .kicad_pro の自動コピー / 指示書(--instructions、Markdown) / 部品を動かしたら部品番号の文字を自動で逃がし、押し出された周りの文字も逃がす（移動前からの重なりには触らない） | 独自（ユーザーの提案: シルクも押しのけ配線のように） | 部品移動の通し試験で DRC が移動前と同一、3D で文字が見えることを確認 |
-| 08 | `kicad-gerber`（info / diff / dirdiff）。差分画像は 灰=共通・赤=消えた・緑=増えた・青枠と番号=差のある場所、場所の座標一覧つき。`kicad-local fabdiff`（2 つの基板の製造データを層ごとに比較）と `renderdiff`（3D 画像の差分） | KiCad 11 の gerber_diff.cpp / gerber_to_polyset.cpp（4852b8485 以降）を移植。PNG は 8.0.9 に PNG プロッタが無いため Cairo で自前描画。gerbview の job の仕組みは移植していない | 同じ基板の 2 つの版の比較で、全層の差がすべて意図した変更で説明できることを確認。副産物として出力設定の穴の印(drillshape 1)を発見 |
+| 08 | `kicad-gerber`（info / diff / dirdiff）。差分画像は 灰=共通・赤=消えた・緑=増えた・青枠と番号=差のある場所、場所の座標一覧つき。`kicad-plus fabdiff`（2 つの基板の製造データを層ごとに比較）と `renderdiff`（3D 画像の差分） | KiCad 11 の gerber_diff.cpp / gerber_to_polyset.cpp（4852b8485 以降）を移植。PNG は 8.0.9 に PNG プロッタが無いため Cairo で自前描画。gerbview の job の仕組みは移植していない | 同じ基板の 2 つの版の比較で、全層の差がすべて意図した変更で説明できることを確認。副産物として出力設定の穴の印(drillshape 1)を発見 |
 | 09 | 基板エディタの AI チャットの枠（Claude Agent SDK。10.0.6 の 0032・0033 と同じ画面と使い方）。8.0.9 には IPC API が無いので、承認したコードは KiCad の中の Python（pcbnew）で実行し、アクションプラグインと同じ仕組みで「元に戻す」の 1 段にする（変わらなかった回は段を作らない、誤りの回は取り消す）。基板を変える実行は、画面で承認した番号のものだけを受け付ける | 独自 | 変えたファイルのコンパイル |
 | 10 | AI チャット: たずねずに実行する切り替え（10.0.6 の 0034 と同じ） | 利用者の希望 | 変えたファイルのコンパイル |
 | 11 | AI チャットの直し: run_python の 1 回目で落ちた（基板を文字列にする時に、SaveBoard と同じ準備をしていなかった）。ビルドした場所から動かす時は ../kicad/kicad-cli を使う | 開発環境整備のセッション（WSL）の報告 | 変えたファイルのコンパイル |
@@ -47,4 +47,4 @@ kicad-cli-local の DRC/ERC をシステム版と突き合わせて確認する�
 
 ## 入口
 
-`kicad-local help`（~/.local/bin。控えは bin/）。drc / erc / render / stats / route / cli / python / patches / rebuild / test。
+`kicad-plus help`（~/.local/bin。控えは bin/）。drc / erc / render / stats / route / cli / python / patches / rebuild / test。

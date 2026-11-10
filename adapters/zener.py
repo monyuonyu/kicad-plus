@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-adapters/zener.py: Zener（diodeinc/pcb の .zen）で作った基板を kicad-local ingest にかける
+adapters/zener.py: Zener（diodeinc/pcb の .zen）で作った基板を kicad-plus ingest にかける
 
   python3 adapters/zener.py <board.zen> --out <出力.kicad_pcb> [--intent 追加.json] [--layout 置き場]
                             [--pcb 基板.kicad_pcb] [--sch 回路図.kicad_sch] [--print-intent] [--json]
@@ -10,7 +10,7 @@ adapters/zener.py: Zener（diodeinc/pcb の .zen）で作った基板を kicad-l
   2. Zener が書き出した KiCad の基板と回路図を探す（--pcb/--sch で直接も。既定は Board(path=…) の置き場と
      .zen の隣の下を探す）。Zener の基板の書き出し（pcb layout など）は先に済ませておく（この道具は Zener を
      動かさない）
-  3. kicad-local ingest にかける（PWR_FLAG・未接続の印・ネット名・ネットクラス・配置の約束・確かめ）
+  3. kicad-plus ingest にかける（PWR_FLAG・未接続の印・ネット名・ネットクラス・配置の約束・確かめ）
 
 部品は Zener の名前（J_USB）のまま intent に書いてよい（Zener はフットプリントの欄 Path に名前を入れる）。
 --print-intent は 1 の結果を出すだけ（ingest しない）。終了コードは ingest と同じ（0 = 要確認なし、1 = あり、2 = 誤り）。
@@ -25,7 +25,7 @@ import tempfile
 from pathlib import Path
 
 HOME = Path(__file__).resolve().parent.parent
-KL = str(HOME / "bin" / "kicad-local")
+KL = str(HOME / "bin" / "kicad-plus")
 
 CALL = re.compile(r'\b(Power|Ground|Net)\(\s*"([^"]+)"([^)]*)\)')
 VOLT = re.compile(r'voltage\s*=\s*"([^"]+)"')

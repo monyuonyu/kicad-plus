@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""kicad-local why: 未配線の組ごとに「なぜ引けないか」を調べる（pcbnew を使う。kicad-python で動かす）
+"""kicad-plus why: 未配線の組ごとに「なぜ引けないか」を調べる（pcbnew を使う。kicad-python で動かす）
 
 使い方:
-  kicad-local why <基板.kicad_pcb> [--json] [--max N]
+  kicad-plus why <基板.kicad_pcb> [--json] [--max N]
 
 未配線の組（DRC の unconnected_items）の両端を結ぶ線を、配線の太さの半分とクリアランスの分だけ
 膨らませた帯として、銅の層ごとに、その帯を塞ぐものを種類に分けて数える:
@@ -30,7 +30,7 @@ KIND_JA = {"keepout": "キープアウト（配線禁止の区域）", "other_ne
 
 def drc_unconnected(board_path):
     out = Path(tempfile.mkdtemp()) / "drc.json"
-    r = subprocess.run(["kicad-cli-local", "pcb", "drc", "--format", "json", "-o", str(out), str(board_path)],
+    r = subprocess.run(["kicad-cli-plus", "pcb", "drc", "--format", "json", "-o", str(out), str(board_path)],
                        capture_output=True, text=True)
     if not out.exists():
         sys.stderr.write(f"DRC を実行できない: {board_path}\n{r.stdout}{r.stderr}")

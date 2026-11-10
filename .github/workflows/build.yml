@@ -45,7 +45,7 @@ jobs:
           distribution: temurin
           java-version: "25"
 
-      - name: Get Freerouting (for kicad-local autoroute)
+      - name: Get Freerouting (for kicad-plus autoroute)
         run: |
           mkdir -p "$HOME/.local/share/kicad-ja-plus"
           curl -fsSL -o "$HOME/.local/share/kicad-ja-plus/freerouting.jar" \

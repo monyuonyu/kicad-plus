@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
-"""kicad-local finish: 基板の仕上げ（画面なし。pcbnew を使う。kicad-python で動かす）
+"""kicad-plus finish: 基板の仕上げ（画面なし。pcbnew を使う。kicad-python で動かす）
 
 使い方（どれも入力は変えず、出力に保存する。--json で機械が読む形）:
-  kicad-local finish outline <入力> <出力> [--margin 3] [--round 1] [--replace]
+  kicad-plus finish outline <入力> <出力> [--margin 3] [--round 1] [--replace]
       部品（クーテッド。無ければ外形）を囲む長方形の外形を作る。--replace で今の外形を消してから
-  kicad-local finish zone <入力> <出力> --net GND [--layers F.Cu,B.Cu] [--clearance 0.3] [--priority 0]
+  kicad-plus finish zone <入力> <出力> --net GND [--layers F.Cu,B.Cu] [--clearance 0.3] [--priority 0]
       外形いっぱいに、そのネットのベタを作って塗る
-  kicad-local finish stitch <入力> <出力> --net GND [--pitch 5] [--drill 穴] [--size 径]（既定は基板の今のビアの設定）
+  kicad-plus finish stitch <入力> <出力> --net GND [--pitch 5] [--drill 穴] [--size 径]（既定は基板の今のビアの設定）
       そのネットのベタが両面にある所に、ほかの物に当たらないようスティッチングビアを格子状に置く
-  kicad-local finish islands <入力> <出力>
+  kicad-plus finish islands <入力> <出力>
       どこにもつながらないベタの島を取り除く（ゾーンの設定を「島は常に消す」にして塗り直す）
-  kicad-local finish widen <入力> <出力> --net 名前 --current 2 [--rise 10] [--copper 35]
-  kicad-local finish widen <入力> <出力> --intent intent.json   （nets の current があるネットを全部。tools/kintent.py）
+  kicad-plus finish widen <入力> <出力> --net 名前 --current 2 [--rise 10] [--copper 35]
+  kicad-plus finish widen <入力> <出力> --intent intent.json   （nets の current があるネットを全部。tools/kintent.py）
       流す電流（A）から IPC-2221 の式で必要な幅を出し、そのネットの細い配線を太くする
       （--rise 許す温度上昇 ℃、--copper 銅の厚さ µm。内層は外層の半分の電流で計算）
-  kicad-local finish fill <入力> <出力>
+  kicad-plus finish fill <入力> <出力>
       ベタを塗り直す
 """
 import argparse

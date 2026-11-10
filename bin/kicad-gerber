@@ -9,7 +9,7 @@ export KICAD_LOCAL_HOME KICAD_LOCAL_BUILD
 # 文字コードが UTF-8 でない環境（LANG が無い docker など）では、日本語の文字列を扱うところで落ちる（kicad_route ほか）ので UTF-8 に
 case "$(locale charmap 2>/dev/null)" in UTF-8) ;; *) export LC_ALL=C.UTF-8 ;; esac
 [ -x "$KICAD_LOCAL_BUILD/gerbview/kicad_gerber" ] || {
-  echo "kicad-gerber（ガーバーの情報と差分）は改良版のビルドが要る: $KICAD_LOCAL_BUILD/gerbview/kicad_gerber が無い。kicad-local doctor で使える命令を確かめる" >&2
+  echo "kicad-gerber（ガーバーの情報と差分）は改良版のビルドが要る: $KICAD_LOCAL_BUILD/gerbview/kicad_gerber が無い。kicad-plus doctor で使える命令を確かめる" >&2
   exit 2; }
 # dirdiff は入稿の zip もそのまま比べられるように(一時フォルダに展開して渡す)
 if [ "$1" = "dirdiff" ]; then

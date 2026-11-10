@@ -1,4 +1,4 @@
-# 別の道具で作った基板を取り込む（kicad-local ingest）
+# 別の道具で作った基板を取り込む（kicad-plus ingest）
 
 Zener（.zen）・tscircuit・SKiDL などのコードから作った回路図と基板は、そのままだと KiCad の確認で
 引っかかることが多い。
@@ -8,10 +8,10 @@ Zener（.zen）・tscircuit・SKiDL などのコードから作った回路図�
   DRC の回路図との照合が net_conflict を出す。ネット名の / の有無（VBUS と /VBUS）でも同じことが起きる
 - 未接続の印が無く、ERC が pin_not_connected を出す
 
-`kicad-local ingest` はこれをそろえ、残った要確認を一覧にする（入力は変えない）。
+`kicad-plus ingest` はこれをそろえ、残った要確認を一覧にする（入力は変えない）。
 
 ```
-kicad-local ingest probe.kicad_sch probe.kicad_pcb --out ingest/probe.kicad_pcb --intent intent.json [--place] [--json]
+kicad-plus ingest probe.kicad_sch probe.kicad_pcb --out ingest/probe.kicad_pcb --intent intent.json [--place] [--json]
 ```
 
 1. PWR_FLAG を付ける（ERC の power_pin_not_driven のネット。intent で `"pwr_flag": true` のネットも）
@@ -45,7 +45,7 @@ kicad-local ingest probe.kicad_sch probe.kicad_pcb --out ingest/probe.kicad_pcb 
 - ネットは / の有無を問わない（VBUS = /VBUS）
 - `edge` は any・left・right・top・bottom（`max_mm` 既定 1.5）、`near` は中心どうしの距離（既定 5）、
   `target: [x, y]` は決まった位置（既定 1）
-- `current` は `kicad-local finish widen 入力 出力 --intent intent.json` でも使う（そのネットの配線を太くする）
+- `current` は `kicad-plus finish widen 入力 出力 --intent intent.json` でも使う（そのネットの配線を太くする）
 - 形の詳しい説明は `tools/kintent.py` の先頭
 
 ## Zener から

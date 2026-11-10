@@ -210,7 +210,7 @@ class Builder:
             "  書き方は 3 通り: 回路図のネット名そのまま(名前の無いネットは Net-(A1-3V3) のような自動の名前)、"
             "部品.端子(例 A1.9、R3.1)、手順の中だけの補助の点(英小文字で始まる名前、例 gpio)\n"
             + (f"  近い名前: {', '.join(near[:6])}\n" if near else "")
-            + "  ネット名の一覧: kicad-local sim nets <回路図>")
+            + "  ネット名の一覧: kicad-plus sim nets <回路図>")
 
     def pin(self, c, fn=None, num=None):
         for p, d in c["pins"].items():

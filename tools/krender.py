@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-krender: kicad-local render / step の中身(2026-10-20)
+krender: kicad-plus render / step の中身(2026-10-20)
 
-  kicad-local render <基板> [視点,視点,...] [出力.png] [--placeholder-boxes] [--height 5] [-w 1600 -h 1200]
+  kicad-plus render <基板> [視点,視点,...] [出力.png] [--placeholder-boxes] [--height 5] [-w 1600 -h 1200]
       視点は top / bottom / left / right / front / back / iso / iso-hq。カンマで並べると 1 回で全部描き、
       出力は <出力の名前>_<視点>.png(出力を省くと <基板名>_<視点>.png)。視点ごとの時間を表示
-  kicad-local step <基板> [出力.step] [--placeholder-boxes] [--height 5] [kicad-cli pcb export step の引数 ...]
+  kicad-plus step <基板> [出力.step] [--placeholder-boxes] [--height 5] [kicad-cli pcb export step の引数 ...]
 
 どちらも先に 3D モデルの無いフットプリントを一覧にする(STEP・画像では胴体が抜けるため)。
 --placeholder-boxes で、無いモデルを F.Fab / F.CrtYd の外形の箱に置き換えた基板の写しから作る(元の基板は変えない)。
@@ -37,7 +37,7 @@ def prepare(pcb, boxes, height, tmp):
 
 def main():
     cmd = sys.argv[1]
-    ap = argparse.ArgumentParser(prog=f"kicad-local {cmd}", add_help=True, conflict_handler="resolve")
+    ap = argparse.ArgumentParser(prog=f"kicad-plus {cmd}", add_help=True, conflict_handler="resolve")
     ap.add_argument("pcb")
     ap.add_argument("--placeholder-boxes", action="store_true", help="無い 3D モデルを外形の箱で代用")
     ap.add_argument("--height", type=float, default=5.0, help="箱の高さ mm(部品の欄 Height が無いとき。既定 5)")
@@ -59,7 +59,7 @@ def main():
         src = prepare(a.pcb, a.placeholder_boxes, a.height, tmp)
         if cmd == "step":
             out = a.out or stem + ".step"
-            r = subprocess.run(["kicad-cli-local", "pcb", "export", "step", *rest, "-o", os.path.abspath(out), src],
+            r = subprocess.run(["kicad-cli-plus", "pcb", "export", "step", *rest, "-o", os.path.abspath(out), src],
                                capture_output=True, text=True)
             msg = (r.stdout + r.stderr).strip()
             print("\n".join(l for l in msg.splitlines() if l.strip() and not l.startswith("Export time")))
@@ -77,7 +77,7 @@ def main():
         rc, total = 0, time.time()
         for v, out in zip(views, outs):
             t = time.time()
-            r = subprocess.run(["kicad-cli-local", "pcb", "render", *VIEWS[v], "-w", a.width, "-h", a.height_px,
+            r = subprocess.run(["kicad-cli-plus", "pcb", "render", *VIEWS[v], "-w", a.width, "-h", a.height_px,
                                 "-o", os.path.abspath(out), src], capture_output=True, text=True)
             ok = r.returncode == 0 and Path(out).exists()
             print(f"→ {out}  ({v}、{time.time() - t:.1f} 秒)" if ok else f"× {v}: 失敗\n{(r.stdout + r.stderr)[-800:]}")

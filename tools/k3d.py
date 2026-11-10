@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-k3d: 基板の 3D モデルの点検と、無いモデルの代わりの箱(kicad-local models / step / render から使う。2026-10-20)
+k3d: 基板の 3D モデルの点検と、無いモデルの代わりの箱(kicad-plus models / step / render から使う。2026-10-20)
 
   kicad-python k3d.py check <基板> [--json]
       3D モデルの無い(ファイルが見つからない・指定が無い)フットプリントの一覧。あれば終了コード 1
@@ -208,7 +208,7 @@ def step_box(path, x0, y0, x1, y1, h, name="placeholder"):
     body = "\n".join(f"#{i + 1}={s};" for i, s in enumerate(ents))
     Path(path).write_text(
         "ISO-10303-21;\nHEADER;\nFILE_DESCRIPTION(('placeholder box'),'2;1');\n"
-        f"FILE_NAME('{name}.step','2026-01-01T00:00:00',(''),(''),'kicad-local k3d','kicad-local k3d','');\n"
+        f"FILE_NAME('{name}.step','2026-01-01T00:00:00',(''),(''),'kicad-plus k3d','kicad-plus k3d','');\n"
         "FILE_SCHEMA(('AUTOMOTIVE_DESIGN { 1 0 10303 214 1 1 1 1 }'));\nENDSEC;\nDATA;\n"
         f"{body}\nENDSEC;\nEND-ISO-10303-21;\n")
 

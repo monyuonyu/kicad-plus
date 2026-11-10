@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-kicad-local review: 新しい版を 1 回で確認して、報告を 1 枚にまとめる(ローカル道具、2026-09-25)
+kicad-plus review: 新しい版を 1 回で確認して、報告を 1 枚にまとめる(ローカル道具、2026-09-25)
 
-  kicad-local review <新しい版> [前の版] [--sim 手順.toml ...] [--runs N] [--out 出力フォルダ]
+  kicad-plus review <新しい版> [前の版] [--sim 手順.toml ...] [--runs N] [--out 出力フォルダ]
 
   版の指定: フォルダ(中の .kicad_pro を探す)か、.kicad_pro / .kicad_sch / .kicad_pcb のどれか
   やること: ERC、DRC(回路図との不一致つき)、3D 画像、
@@ -64,7 +64,7 @@ def check_list(title, arr):
 
 def erc(sch, t):
     out = t / "erc.json"
-    run(["kicad-cli-local", "sch", "erc", "--format", "json", "-o", str(out), str(sch)])
+    run(["kicad-cli-plus", "sch", "erc", "--format", "json", "-o", str(out), str(sch)])
     if not out.exists():
         return "実行できない", [], 1
     d = json.loads(out.read_text())
@@ -76,7 +76,7 @@ def erc(sch, t):
 
 def drc(pcb, t):
     out = t / "drc.json"
-    run(["kicad-cli-local", "pcb", "drc", "--schematic-parity", "--format", "json", "-o", str(out), str(pcb)])
+    run(["kicad-cli-plus", "pcb", "drc", "--schematic-parity", "--format", "json", "-o", str(out), str(pcb)])
     if not out.exists():
         return None
     d = json.loads(out.read_text())
@@ -214,7 +214,7 @@ def main():
         summary.append(("回路図の点検", f"要確認 {len(items)} 件" + (
             f"(前の版から 解消 {len(set(map(key, old_items)) - set(map(key, items)))}・新規 {len(set(map(key, items)) - set(map(key, old_items)))})"
             if old_items is not None else ""), "要確認" if items else "OK"))
-        body += ["## 回路図の点検(設計の定石からの外れ。kicad-local lint)", ""]
+        body += ["## 回路図の点検(設計の定石からの外れ。kicad-plus lint)", ""]
         for cat, where, msg in items:
             new = old_items is not None and (cat, msg) not in {key(t) for t in old_items}
             body.append(f"- [{cat}] **{where}**: {msg}" + (" **(新規)**" if new else ""))
@@ -236,7 +236,7 @@ def main():
             summary.append(("出力設定", f"穴の印(drillshape {ds.group(1)})が有効", "要確認"))
             body += ["## 出力設定", "", f"- 穴の印(drillshape {ds.group(1)})が有効。ガーバーの全層に穴の印が入る。メーカー向けは「なし」が基本。", ""]
         step("3D 画像")
-        run(["kicad-local", "render", str(pcb), "iso", str(out / "3D_斜め.png")])
+        run(["kicad-plus", "render", str(pcb), "iso", str(out / "3D_斜め.png")])
         body += ["## 3D", "", "![](3D_斜め.png)", ""]
 
     if a.old:
@@ -252,7 +252,7 @@ def main():
             body += ["### 接続の差分(端子のつながりで比較。ネット名だけの変更は含まない)", ""] + (rows or ["なし"]) + [""]
         if pcb and opcb:
             step("製造データの差分")
-            r = run(["kicad-local", "fabdiff", str(opcb), str(pcb), str(out / "製造データ比較")])
+            r = run(["kicad-plus", "fabdiff", str(opcb), str(pcb), str(out / "製造データ比較")])
             md = out / "製造データ比較" / "差分まとめ.md"
             diff_layers = []
             if md.exists():
@@ -267,7 +267,7 @@ def main():
             step("3D の差分")
             for side in ("top", "bottom"):
                 png = f"3D差分_{'上面' if side == 'top' else '下面'}.png"
-                r = run(["kicad-local", "renderdiff", str(opcb), str(pcb), side, str(out / png)])
+                r = run(["kicad-plus", "renderdiff", str(opcb), str(pcb), side, str(out / png)])
                 body += [f"{'上面' if side == 'top' else '下面'}: " + " ".join(l for l in r.stdout.splitlines() if "画素" in l), "", f"![]({png})", ""]
 
     if a.sim:
@@ -276,7 +276,7 @@ def main():
             spec = Path(spec).resolve()
             step(f"シミュレーション {spec.stem}")
             so = out / f"シミュレーション_{spec.stem}"
-            cmd = ["kicad-local", "sim", "run", str(spec), "--out", str(so)] + (["--sch", str(sch)] if sch else [])
+            cmd = ["kicad-plus", "sim", "run", str(spec), "--out", str(so)] + (["--sch", str(sch)] if sch else [])
             if a.runs is not None:
                 cmd += ["--runs", str(a.runs)]
             r = run(cmd)
@@ -290,7 +290,7 @@ def main():
     md = [f"# 基板の確認: {name}", "",
           f"- 新しい版: `{sch or pcb}`" + (f"(回路図 {datetime.datetime.fromtimestamp(sch.stat().st_mtime):%Y-%m-%d %H:%M} 保存)" if sch else ""),
           f"- 前の版: `{osch or opcb}`" if a.old else "- 前の版: なし",
-          f"- 実行: {datetime.datetime.now():%Y-%m-%d %H:%M}(kicad-local review)", "",
+          f"- 実行: {datetime.datetime.now():%Y-%m-%d %H:%M}(kicad-plus review)", "",
           "## まとめ", "", "| 項目 | 結果 | 判定 |", "|---|---|---|"]
     md += [f"| {k} | {v} | {'**' + j + '**' if j in ('要確認', '注意') else j} |" for k, v, j in summary]
     md += [""] + body

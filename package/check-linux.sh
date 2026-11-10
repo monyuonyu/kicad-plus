@@ -4,7 +4,7 @@
 # 使い方: package/check-linux.sh [展開した場所=このスクリプトの 1 つ上] [画像の出力先]
 #   画面（pcbnew・eeschema・kicad）の起動は、xvfb-run があれば仮想の画面で確かめる（無ければ飛ばす）。
 #   ImageMagick（import）があれば、起動した画面の画像を出力先に残す。
-# 回帰試験（kicad-local test）は別。こちらは数十秒で終わる確かめだけ。
+# 回帰試験（kicad-plus test）は別。こちらは数十秒で終わる確かめだけ。
 set -uo pipefail
 pkg=$(readlink -f "${1:-$(dirname "$(readlink -f "$0")")/..}")
 shots=${2:-}
@@ -50,8 +50,8 @@ else
 fi
 
 echo "--- 動作"
-chk "kicad-cli version" "kicad-cli-local version"
-echo "        $(kicad-cli-local version 2>/dev/null)"
+chk "kicad-cli version" "kicad-cli-plus version"
+echo "        $(kicad-cli-plus version 2>/dev/null)"
 chk "kicad-python で import pcbnew（同梱のモジュール）" \
   "kicad-python -c 'import pcbnew,sys; print(pcbnew.Version()); sys.exit(0 if pcbnew.__file__.startswith(\"$b/\") else 1)'"
 echo "        pcbnew.Version() = $(kicad-python -c 'import pcbnew; print(pcbnew.Version())' 2>/dev/null)"
@@ -68,14 +68,14 @@ if [ $has_fr = 1 ]; then
   # 同梱の jar と Java を自分で見つけて動くこと（システムの java や指定の環境変数は使わない）
   mkdir -p "$t/ar" && cp "$pkg/test/in.kicad_pcb" "$pkg/test/in.kicad_pro" "$t/ar/"
   (cd "$t/ar" && kicad-python -c "import pcbnew; b=pcbnew.LoadBoard('in.kicad_pcb'); t=[x for x in b.GetTracks() if not isinstance(x, pcbnew.PCB_VIA)]; b.Remove(t[len(t)//2]); b.Save('un.kicad_pcb')" && cp in.kicad_pro un.kicad_pro) > /dev/null 2>&1
-  chk "kicad-local autoroute（同梱の Freerouting と Java で、未配線 0）" \
-    "cd '$t/ar' && env -u FREEROUTING_JAR -u FREEROUTING_JAVA -u JAVA_HOME kicad-local autoroute un.kicad_pcb out.kicad_pcb --passes 5 --timeout 300 --json > ar.json; \
+  chk "kicad-plus autoroute（同梱の Freerouting と Java で、未配線 0）" \
+    "cd '$t/ar' && env -u FREEROUTING_JAR -u FREEROUTING_JAVA -u JAVA_HOME kicad-plus autoroute un.kicad_pcb out.kicad_pcb --passes 5 --timeout 300 --json > ar.json; \
      python3 -c \"import json,sys; d=json.load(open('ar.json')); print(d['java']); sys.exit(0 if d['ok'] and d['unconnected_after']==0 and d['java'].startswith('$b/freerouting/') and d['jar'].startswith('$b/freerouting/') else 1)\""
 fi
 
 if command -v xvfb-run > /dev/null; then
   echo "--- 画面（仮想の画面で 35 秒動かし、落ちないこと）"
-  for app in pcbnew-ja eeschema-ja kicad-ja; do
+  for app in pcbnew-plus eeschema-plus kicad-plus-gui; do
     shot=""
     [ -n "$shots" ] && command -v import > /dev/null && { mkdir -p "$shots"; shot="$(readlink -f "$shots")/$app.png"; }
     # 設定は使い捨ての場所に（初めて起動したときの窓が出るが、動いていれば良しとする）。日本語の環境があれば日本語で

@@ -25,40 +25,40 @@ There are a Windows installer and zip, and a Linux (Ubuntu 24.04) tar.gz; see "I
 
 ## What it can do
 
-There is a single entry point, `kicad-local` (`kicad-local help` lists the commands).
+There is a single entry point, `kicad-plus` (`kicad-plus help` lists the commands).
 
 ```
-kicad-local drc 基板.kicad_pcb            # DRC summary (count and location per violation type)
-kicad-local erc 回路図.kicad_sch
-kicad-local lint 回路図.kicad_sch          # departures from common design practice (protection on external lines, base resistors, supply capacitors...)
-kicad-local render 基板.kicad_pcb iso      # 3D image without a GUI
-kicad-local render 基板.kicad_pcb top,bottom,iso-hq   # several views in one call (<board>_<view>.png, time per view)
-kicad-local step 基板.kicad_pcb --placeholder-boxes   # STEP; lists parts with no 3D model and substitutes an outline box (height from the Height field)
-kicad-local stats 基板.kicad_pcb           # part count, hole sizes, etc.
-kicad-local netlist 回路図.kicad_sch --json   # netlist as JSON (parts, fields, pin number/name/type, nets and their nodes); for a board, from the pad nets
-kicad-local drc 基板.kicad_pcb --strict    # also the 3 things DRC misses even at "0 violations" (pads without a net, tracks thinner than the netclass, stale zone fills)
-kicad-local why 基板.kicad_pcb             # for each unrouted pair, "why it can't be routed" (keepouts, copper of other nets, board outline), per layer
-kicad-local view 基板.kicad_pcb --drc --net GND   # annotated 2D image (highlighted nets, numbered DRC violations)
-kicad-local autoroute 入力.kicad_pcb 出力.kicad_pcb   # autoroute the whole board with Freerouting, then refill zones and run DRC
-kicad-local finish outline|zone|stitch|islands|widen 入力 出力 ...   # board outline, zones, stitching vias, island removal, widening tracks from current
-kicad-local finish widen 入力 出力 --intent intent.json   # widen every net that has a current in intent.json
-kicad-local ingest 回路図 基板 --out 出力.kicad_pcb --intent intent.json [--place]   # bring in a board made by another tool (Zener etc.): PWR_FLAG, no-connect marks, net names matched to the schematic, netclasses, placement rules, checks (docs/ingest.md)
-kicad-local doctor                        # which commands work here (falls back to the stock KiCad when there is no build)
+kicad-plus drc 基板.kicad_pcb            # DRC summary (count and location per violation type)
+kicad-plus erc 回路図.kicad_sch
+kicad-plus lint 回路図.kicad_sch          # departures from common design practice (protection on external lines, base resistors, supply capacitors...)
+kicad-plus render 基板.kicad_pcb iso      # 3D image without a GUI
+kicad-plus render 基板.kicad_pcb top,bottom,iso-hq   # several views in one call (<board>_<view>.png, time per view)
+kicad-plus step 基板.kicad_pcb --placeholder-boxes   # STEP; lists parts with no 3D model and substitutes an outline box (height from the Height field)
+kicad-plus stats 基板.kicad_pcb           # part count, hole sizes, etc.
+kicad-plus netlist 回路図.kicad_sch --json   # netlist as JSON (parts, fields, pin number/name/type, nets and their nodes); for a board, from the pad nets
+kicad-plus drc 基板.kicad_pcb --strict    # also the 3 things DRC misses even at "0 violations" (pads without a net, tracks thinner than the netclass, stale zone fills)
+kicad-plus why 基板.kicad_pcb             # for each unrouted pair, "why it can't be routed" (keepouts, copper of other nets, board outline), per layer
+kicad-plus view 基板.kicad_pcb --drc --net GND   # annotated 2D image (highlighted nets, numbered DRC violations)
+kicad-plus autoroute 入力.kicad_pcb 出力.kicad_pcb   # autoroute the whole board with Freerouting, then refill zones and run DRC
+kicad-plus finish outline|zone|stitch|islands|widen 入力 出力 ...   # board outline, zones, stitching vias, island removal, widening tracks from current
+kicad-plus finish widen 入力 出力 --intent intent.json   # widen every net that has a current in intent.json
+kicad-plus ingest 回路図 基板 --out 出力.kicad_pcb --intent intent.json [--place]   # bring in a board made by another tool (Zener etc.): PWR_FLAG, no-connect marks, net names matched to the schematic, netclasses, placement rules, checks (docs/ingest.md)
+kicad-plus doctor                        # which commands work here (falls back to the stock KiCad when there is no build)
 
 # Move parts and route (steps can also come from stdin)
-kicad-local route 基板.kicad_pcb 出力.kicad_pcb - --instructions 手順.md <<'EOF'
+kicad-plus route 基板.kicad_pcb 出力.kicad_pcb - --instructions 手順.md <<'EOF'
 findspace R10 0.25                  # candidate places where it fits
 drag R10 1,0                        # moving it reroutes the connected tracks around it and moves silkscreen text out of the way
 autoroute R10.2 C5.1                # automatically find a path with at most 1 via
 check                               # DRC on the spot
 EOF
 
-kicad-local sch 入力.kicad_sch 出力.kicad_sch 手順   # edit a schematic without a GUI (after saving: connectivity and BOM diff, ERC)
-kicad-local pcbsync 回路図 基板 出力                # push schematic changes to the board
-kicad-local pcb update-from-schematic --dry-run --json 基板.kicad_pcb   # the same, kicad-cli style; --dry-run only reports changes, a real run ends with a DRC parity check
-kicad-local fabdiff 前.kicad_pcb 後.kicad_pcb 比較/  # compare fabrication output layer by layer, with diff images and a list of locations
-kicad-local sim run 手順.toml --out 結果/            # build SPICE automatically from the schematic and simulate (ngspice)
-kicad-local review 新しい版 前の版 --out 確認/        # ERC, DRC, 3D, diffs and simulation in one run → 報告.md (report)
+kicad-plus sch 入力.kicad_sch 出力.kicad_sch 手順   # edit a schematic without a GUI (after saving: connectivity and BOM diff, ERC)
+kicad-plus pcbsync 回路図 基板 出力                # push schematic changes to the board
+kicad-plus pcb update-from-schematic --dry-run --json 基板.kicad_pcb   # the same, kicad-cli style; --dry-run only reports changes, a real run ends with a DRC parity check
+kicad-plus fabdiff 前.kicad_pcb 後.kicad_pcb 比較/  # compare fabrication output layer by layer, with diff images and a list of locations
+kicad-plus sim run 手順.toml --out 結果/            # build SPICE automatically from the schematic and simulate (ngspice)
+kicad-plus review 新しい版 前の版 --out 確認/        # ERC, DRC, 3D, diffs and simulation in one run → 報告.md (report)
 ```
 
 With `--instructions`, it also writes a step-by-step guide that lets a person reproduce the same operations in the KiCad GUI.
@@ -114,21 +114,21 @@ Shared components such as wxWidgets, OpenCASCADE and ngspice, and the part libra
    sha256sum -c kicad-ja-plus-10.0.6-linux-x86_64.tar.gz.sha256
    tar xzf kicad-ja-plus-10.0.6-linux-x86_64.tar.gz
    export PATH="$PWD/kicad-ja-plus-10.0.6-linux-x86_64/bin:$PATH"
-   kicad-local help
+   kicad-plus help
    kicad-ja-plus-10.0.6-linux-x86_64/package/check-linux.sh   # checks the contents and that things run (tens of seconds)
-   kicad-local test        # regression tests. If everything is OK, the installation is correct
+   kicad-plus test        # regression tests. If everything is OK, the installation is correct
    ```
 
-3. Start the GUI with `pcbnew-ja` (PCB editor), `eeschema-ja` (schematic editor) or `kicad-ja` (project manager)
+3. Start the GUI with `pcbnew-plus` (PCB editor), `eeschema-plus` (schematic editor) or `kicad-plus-gui` (project manager)
    (on WSL2 it appears through WSLg). From Python: `kicad-python -c "import pcbnew; print(pcbnew.Version())"`.
 
-- If KiCad has never been started on the system, start `kicad-ja` or upstream `kicad` once to finish the first-run setup (library tables).
+- If KiCad has never been started on the system, start `kicad-plus-gui` or upstream `kicad` once to finish the first-run setup (library tables).
 - The launchers in `bin/` use the `build/` inside the extracted folder automatically. To use them from another `bin/` (e.g. a git clone of this repository),
   set `export KICAD_LOCAL_BUILD=<extracted folder>/build`.
 - If the upstream KiCad is from another series (e.g. the KiCad 8 PPA with the 10.0.6 package), install the missing shared components with
-  `sudo apt install $(cat DEPENDS-apt.txt)`. `kicad-local test` and some tools compare against the system `kicad-cli`, so they fail unless the series match.
+  `sudo apt install $(cat DEPENDS-apt.txt)`. `kicad-plus test` and some tools compare against the system `kicad-cli`, so they fail unless the series match.
 
-For whole-board autorouting (`kicad-local autoroute`), [Freerouting](https://github.com/freerouting/freerouting) 2.4.1 (GPL-3.0)
+For whole-board autorouting (`kicad-plus autoroute`), [Freerouting](https://github.com/freerouting/freerouting) 2.4.1 (GPL-3.0)
 and a minimal Java runtime just for it (jlinked from Temurin 25) are bundled (`build/freerouting/`; origin and licenses in its README.txt).
 It works on systems without Java. To use another jar or java, set `--jar`, `FREEROUTING_JAR` or `FREEROUTING_JAVA`.
 The Windows version has the same in `<KiCad>\freerouting\`, started with `<KiCad>\bin\freerouting.cmd` (Freerouting in the Start menu).
@@ -165,7 +165,7 @@ When building from source, provide Java 25 or later and the Freerouting jar your
 
    ```
    export PATH="$PWD/bin:$PATH"
-   kicad-local help
+   kicad-plus help
    ```
 
    Set the build directory with `KICAD_LOCAL_BUILD` (default `~/src/build-10.0.6`; for 8.0.9, `export KICAD_LOCAL_BUILD=~/src/build-8.0.9`).
@@ -175,7 +175,7 @@ When building from source, provide Java 25 or later and the Freerouting jar your
 ## Tests
 
 ```
-kicad-local test        # = test/regress.sh (a few tens of seconds)
+kicad-plus test        # = test/regress.sh (a few tens of seconds)
 ```
 
 Using the demo board (pic_programmer) and schematic (interf_u) that ship with KiCad 8.0.9, it runs routing steps and compares the results with the baseline (`test/baseline/`),
@@ -187,9 +187,9 @@ and also checks each tool individually.
 |---|---|
 | `patches/10.0.6/` | Changes for KiCad 10.0.6 (numbered patches; upstream MRs carry the author's name) |
 | `patches/8.0.9/` | Changes for KiCad 8.0.9. `ALL-combined.patch` combines them all; the numbered patches are a historical record |
-| `bin/` | Entry points (`kicad-local`, `kicad-route`, `kicad-gerber`, `kicad-cli-local`, `kicad-python`) and GUI launchers (`pcbnew-ja`, `eeschema-ja`, `kicad-ja`) |
+| `bin/` | Entry points (`kicad-plus`, `kicad-route`, `kicad-gerber`, `kicad-cli-plus`, `kicad-python`) and GUI launchers (`pcbnew-plus`, `eeschema-plus`, `kicad-plus-gui`) |
 | `tools/` | Python tools (review, lint, sch, sim, pcbsync, silkfix, ingest, etc.) |
-| `adapters/` | Bridges from other board generators to `kicad-local ingest` (`zener.py`: Zener .zen) |
+| `adapters/` | Bridges from other board generators to `kicad-plus ingest` (`zener.py`: Zener .zen) |
 | `test/` | Regression tests |
 | `package/` | Scripts that build the distribution (`linux.sh`: makes a tar.gz from the build directory; `check-linux.sh`: checks an extracted package) |
 | `installer/` | Windows installer (NSIS) |

@@ -2,9 +2,9 @@
 """
 pcbsync: 回路図の変更を基板に反映する(画面の「回路図から基板を更新」の画面なし版。ローカル道具、2026-09-25)
 
-  kicad-local pcbsync <回路図.kicad_sch> <基板.kicad_pcb> <出力.kicad_pcb> [--at x,y] [--delete] [--swap] [--dry-run] [--json]
-  kicad-local pcb update-from-schematic [--schematic 回路図] -o 出力 <基板> [--dry-run] [--json]   (kicad-cli 風の別名。
-      kicad-cli-local pcb update-from-schematic も同じ)
+  kicad-plus pcbsync <回路図.kicad_sch> <基板.kicad_pcb> <出力.kicad_pcb> [--at x,y] [--delete] [--swap] [--dry-run] [--json]
+  kicad-plus pcb update-from-schematic [--schematic 回路図] -o 出力 <基板> [--dry-run] [--json]   (kicad-cli 風の別名。
+      kicad-cli-plus pcb update-from-schematic も同じ)
 
   - 回路図にあって基板に無い部品を、フットプリントのライブラリから読み込んで --at の位置(既定: 基板の右外)に並べる
   - 端子のネットを回路図どおりにする(ネット名も)
@@ -16,7 +16,7 @@ pcbsync: 回路図の変更を基板に反映する(画面の「回路図から�
     --schematic-parity でも照合する(--no-drc で省く)。残りがあれば終了コード 1
   - --dry-run は書かずに変わる所だけ、--json で機械が読む形
   部品は部品番号で対応させる(画面の F8 の既定は回路図の記号の UUID。番号を振り直した直後は画面で)。
-  あとは kicad-local route で置いて配線する(findspace / place / autoroute)。
+  あとは kicad-plus route で置いて配線する(findspace / place / autoroute)。
 """
 import argparse, json, re, subprocess, sys, tempfile
 from pathlib import Path
@@ -97,7 +97,7 @@ def drc_parity(sch, pcb, pro):
         if pro and Path(pro).exists():
             shutil.copy(pro, t / "__parity__.kicad_pro")
         shutil.copy(pcb, t / "__parity__.kicad_pcb")
-        cli = "kicad-cli-local" if shutil.which("kicad-cli-local") else "kicad-cli"
+        cli = "kicad-cli-plus" if shutil.which("kicad-cli-plus") else "kicad-cli"
         subprocess.run([cli, "pcb", "drc", "--schematic-parity", "--format", "json", "-o", str(t / "d.json"),
                         str(t / "__parity__.kicad_pcb")], capture_output=True)
         if not (t / "d.json").exists():
@@ -108,7 +108,7 @@ def drc_parity(sch, pcb, pro):
 
 
 def main():
-    ap = argparse.ArgumentParser(prog="kicad-local pcbsync",
+    ap = argparse.ArgumentParser(prog="kicad-plus pcbsync",
                                  description="回路図の変更を基板に反映する(画面の「回路図から基板を更新」F8 の画面なし版)")
     ap.add_argument("files", nargs="+", help="<回路図> <基板> <出力>(kicad-cli 風に <基板> だけでも: 回路図は --schematic か同じ名前)")
     ap.add_argument("--schematic", "-s", help="回路図(省くと基板と同じ名前の .kicad_sch)")

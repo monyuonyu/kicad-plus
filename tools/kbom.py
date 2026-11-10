@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-kbom: 部品表(BOM)と回路図・基板の照合(kicad-local bom。2026-10-29)
+kbom: 部品表(BOM)と回路図・基板の照合(kicad-plus bom。2026-10-29)
 
-  kicad-local bom check <回路図|基板> [--bom 部品表.xlsx|.csv] [--json]
+  kicad-plus bom check <回路図|基板> [--bom 部品表.xlsx|.csv] [--json]
       品番の末尾が表すリードの間隔(村田 RDE の P1/K1、TDK FG の FG1x/FG2x)とフットプリントの間隔を比べる。
       --bom を付けると、部品表の品番も使い、部品表と回路図の食い違い(部品番号の過不足・値の違い)も出す。
       食い違いがあれば終了コード 1
-  kicad-local bom update <回路図> <部品表.xlsx> [-o 出力.xlsx] [--dry-run]
+  kicad-plus bom update <回路図> <部品表.xlsx> [-o 出力.xlsx] [--dry-run]
       部品表の値の列を回路図の値に合わせる(変わるセルだけ書き換え、ほかの中身・書式はそのまま)
-  kicad-local bom record <品番> <間隔 mm> --src "出典" [--dir 案件のフォルダ]
+  kicad-plus bom record <品番> <間隔 mm> --src "出典" [--dir 案件のフォルダ]
       確かめたリード間隔を案件の記録(kbom_確認済み.toml)に残す。次の check から使う
 
 リード間隔の根拠は、案件の記録 → tools/bomrules.toml の規則(メーカーの資料で確かめた系列だけ)の順。
@@ -199,7 +199,7 @@ def record(folder, pn, pitch, src):
     recs = load_records(folder)
     recs[pn] = {"pitch": float(pitch), "src": src, "date": datetime.date.today().isoformat()}
     q = lambda t: '"' + str(t).replace("\\", "\\\\").replace('"', '\\"') + '"'  # noqa: E731
-    lines = ["# kicad-local bom record が書く: 確かめたリード間隔 [mm] と出典(手で直してもよい)", ""]
+    lines = ["# kicad-plus bom record が書く: 確かめたリード間隔 [mm] と出典(手で直してもよい)", ""]
     for k in sorted(recs):
         r = recs[k]
         lines += [f"[pitch.{q(k)}]", f"pitch = {float(r['pitch']):g}", f"src = {q(r.get('src', ''))}",
@@ -400,7 +400,7 @@ def write_cells(src, dst, values):
 
 # ---------------------------------------------------------------- 入口
 def main():
-    ap = argparse.ArgumentParser(prog="kicad-local bom", description="部品表と回路図・基板の照合")
+    ap = argparse.ArgumentParser(prog="kicad-plus bom", description="部品表と回路図・基板の照合")
     sub = ap.add_subparsers(dest="cmd", required=True)
     c = sub.add_parser("check", help="品番のリード間隔とフットプリント、部品表と回路図の食い違い")
     c.add_argument("design")

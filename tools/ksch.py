@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-kicad-local sch: 画面なしで回路図を直す(ローカル道具、2026-09-25。KiCad 8 形式のまま保存)
+kicad-plus sch: 画面なしで回路図を直す(ローカル道具、2026-09-25。KiCad 8 形式のまま保存)
 
-  kicad-local sch <入力.kicad_sch> <出力.kicad_sch|-> <手順ファイル|-> [--instructions 指示書.md]
+  kicad-plus sch <入力.kicad_sch> <出力.kicad_sch|-> <手順ファイル|-> [--instructions 指示書.md]
       出力を - にすると保存せず、確認だけ(接続の変化と ERC を表示)
 
 手順(1 行 1 命令。# 以降は注釈。値に空白があれば "..." で囲む):
@@ -614,7 +614,7 @@ def main():
         try:
             f(t[1:])
         except (IndexError, ValueError) as e:
-            raise SystemExit(f"{ln} 行目「{line}」の書き方が違う({e})。kicad-local sch --help")
+            raise SystemExit(f"{ln} 行目「{line}」の書き方が違う({e})。kicad-plus sch --help")
 
     if a.output == "-":
         tmp = Path(tempfile.mkdtemp()) / Path(a.input).name

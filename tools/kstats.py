@@ -2,7 +2,7 @@
 """
 kstats: 基板の統計（部品・パッド・穴・面積・最小の配線幅とクリアランス）
 
-  kicad-local stats <基板.kicad_pcb> [--json]
+  kicad-plus stats <基板.kicad_pcb> [--json]
 
 kicad-cli の pcb export stats を英語の環境で呼んで（本家の kicad-cli は日本語の環境だと JSON の
 項目名まで訳す）、ここで日本語にする。配線や穴が無い基板の最小値（KiCad は整数の上限 2147.4836 mm を
@@ -31,7 +31,7 @@ def value(v):
 def stats(board):
     out = Path(tempfile.mkdtemp()) / "s.json"
     env = dict(os.environ, LANG="C.UTF-8", LC_ALL="C.UTF-8", LANGUAGE="")
-    r = subprocess.run(["kicad-cli-local", "pcb", "export", "stats", "--format", "json", "-o", str(out), str(board)],
+    r = subprocess.run(["kicad-cli-plus", "pcb", "export", "stats", "--format", "json", "-o", str(out), str(board)],
                        capture_output=True, text=True, env=env)
     if not out.exists():
         sys.stderr.write(f"統計を取れない: {board}\n{r.stdout}{r.stderr}")
@@ -85,7 +85,7 @@ def show(d):
 
 
 def main():
-    ap = argparse.ArgumentParser(prog="kicad-local stats", description=__doc__.split("\n")[1])
+    ap = argparse.ArgumentParser(prog="kicad-plus stats", description=__doc__.split("\n")[1])
     ap.add_argument("board")
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args()

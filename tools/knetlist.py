@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-knetlist: 回路図・基板のネットリストを JSON に(kicad-local netlist。2026-10-20)
+knetlist: 回路図・基板のネットリストを JSON に(kicad-plus netlist。2026-10-20)
 
-  kicad-local netlist <回路図.kicad_sch | 基板.kicad_pcb> [--json] [-o 出力.json]
+  kicad-plus netlist <回路図.kicad_sch | 基板.kicad_pcb> [--json] [-o 出力.json]
 
   回路図: kicad-cli sch export netlist --format kicadxml を読み直したもの
   基板:   パッドのネット(基板に入っているつながり。回路図との食い違いを見るときは両方を出して比べる)
@@ -31,7 +31,7 @@ def unescape(name):
 def from_sch(sch):
     with tempfile.TemporaryDirectory() as t:
         out = Path(t) / "n.xml"
-        cli = "kicad-cli-local" if any((Path(p) / "kicad-cli-local").exists() for p in os.environ.get("PATH", "").split(os.pathsep)) else "kicad-cli"
+        cli = "kicad-cli-plus" if any((Path(p) / "kicad-cli-plus").exists() for p in os.environ.get("PATH", "").split(os.pathsep)) else "kicad-cli"
         r = subprocess.run([cli, "sch", "export", "netlist", "--format", "kicadxml", "-o", str(out), sch],
                            capture_output=True, text=True)
         if not out.exists():
@@ -101,7 +101,7 @@ def from_pcb(pcb, board=None):
 
 
 def main():
-    ap = argparse.ArgumentParser(prog="kicad-local netlist", description="回路図・基板のネットリストを JSON に")
+    ap = argparse.ArgumentParser(prog="kicad-plus netlist", description="回路図・基板のネットリストを JSON に")
     ap.add_argument("file", help=".kicad_sch か .kicad_pcb(.kicad_pro なら同じ名前の回路図)")
     ap.add_argument("--json", action="store_true", help="JSON で出す")
     ap.add_argument("-o", "--output", help="JSON を書くファイル(--json の代わりに)")

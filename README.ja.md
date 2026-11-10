@@ -23,37 +23,37 @@ Windows のインストーラーと zip、Linux（Ubuntu 24.04）の tar.gz が�
 
 ## できること
 
-入口は `kicad-local` 1 つです（`kicad-local help` で一覧が出ます）。
+入口は `kicad-plus` 1 つです（`kicad-plus help` で一覧が出ます）。
 
 ```
-kicad-local drc 基板.kicad_pcb            # DRC の要点（種類ごとの件数と位置）
-kicad-local erc 回路図.kicad_sch
-kicad-local lint 回路図.kicad_sch          # 設計の定石からの外れ（外部の線の保護・ベース抵抗・電源のコンデンサ…）
-kicad-local render 基板.kicad_pcb iso      # 画面なしで 3D 画像
-kicad-local render 基板.kicad_pcb top,bottom,iso-hq   # 視点をカンマで並べて 1 回で（<基板名>_<視点>.png、視点ごとの時間）
-kicad-local step 基板.kicad_pcb --placeholder-boxes   # STEP。3D モデルの無い部品を一覧にし、外形の箱（高さは欄 Height）で代用
-kicad-local stats 基板.kicad_pcb           # 部品数・穴径など
-kicad-local netlist 回路図.kicad_sch --json   # ネットリストを JSON に（部品・欄・端子の番号/名前/種類、ネットと端子）。基板ならパッドのネットから
-kicad-local drc 基板.kicad_pcb --strict    # DRC が「違反 0」でも見逃す 3 つ（ネットの無いパッド・ネットクラスより細い配線・古いベタ）も
-kicad-local why 基板.kicad_pcb             # 未配線の組ごとに「なぜ引けないか」（キープアウト・ほかのネットの銅・外形）を層ごとに
-kicad-local view 基板.kicad_pcb --drc --net GND   # 2D の図を注釈つきで画像に（ネットの強調・DRC の違反に番号）
-kicad-local autoroute 入力.kicad_pcb 出力.kicad_pcb   # 基板全体を Freerouting で自動配線し、ベタの塗り直しと DRC まで
-kicad-local finish outline|zone|stitch|islands|widen 入力 出力 ...   # 外形・ベタ・スティッチングビア・島の除去・電流から配線を太く
+kicad-plus drc 基板.kicad_pcb            # DRC の要点（種類ごとの件数と位置）
+kicad-plus erc 回路図.kicad_sch
+kicad-plus lint 回路図.kicad_sch          # 設計の定石からの外れ（外部の線の保護・ベース抵抗・電源のコンデンサ…）
+kicad-plus render 基板.kicad_pcb iso      # 画面なしで 3D 画像
+kicad-plus render 基板.kicad_pcb top,bottom,iso-hq   # 視点をカンマで並べて 1 回で（<基板名>_<視点>.png、視点ごとの時間）
+kicad-plus step 基板.kicad_pcb --placeholder-boxes   # STEP。3D モデルの無い部品を一覧にし、外形の箱（高さは欄 Height）で代用
+kicad-plus stats 基板.kicad_pcb           # 部品数・穴径など
+kicad-plus netlist 回路図.kicad_sch --json   # ネットリストを JSON に（部品・欄・端子の番号/名前/種類、ネットと端子）。基板ならパッドのネットから
+kicad-plus drc 基板.kicad_pcb --strict    # DRC が「違反 0」でも見逃す 3 つ（ネットの無いパッド・ネットクラスより細い配線・古いベタ）も
+kicad-plus why 基板.kicad_pcb             # 未配線の組ごとに「なぜ引けないか」（キープアウト・ほかのネットの銅・外形）を層ごとに
+kicad-plus view 基板.kicad_pcb --drc --net GND   # 2D の図を注釈つきで画像に（ネットの強調・DRC の違反に番号）
+kicad-plus autoroute 入力.kicad_pcb 出力.kicad_pcb   # 基板全体を Freerouting で自動配線し、ベタの塗り直しと DRC まで
+kicad-plus finish outline|zone|stitch|islands|widen 入力 出力 ...   # 外形・ベタ・スティッチングビア・島の除去・電流から配線を太く
 
 # 部品を動かし、配線する（手順は標準入力でも可）
-kicad-local route 基板.kicad_pcb 出力.kicad_pcb - --instructions 手順.md <<'EOF'
+kicad-plus route 基板.kicad_pcb 出力.kicad_pcb - --instructions 手順.md <<'EOF'
 findspace R10 0.25                  # 置ける場所の候補
 drag R10 1,0                        # 動かすと、つながった線は迂回して引き直し、シルクの文字も逃がす
 autoroute R10.2 C5.1                # ビア 1 個までの経路を自動で探す
 check                               # その場で DRC
 EOF
 
-kicad-local sch 入力.kicad_sch 出力.kicad_sch 手順   # 回路図を画面なしで直す（保存後に接続と部品表の差・ERC）
-kicad-local pcbsync 回路図 基板 出力                # 回路図の変更を基板へ
-kicad-local pcb update-from-schematic --dry-run --json 基板.kicad_pcb   # 同じことを kicad-cli 風に。--dry-run は変わる所だけ、書いたら DRC の照合まで
-kicad-local fabdiff 前.kicad_pcb 後.kicad_pcb 比較/  # 製造データを層ごとに比べ、差分画像と場所の一覧
-kicad-local sim run 手順.toml --out 結果/            # 回路図から自動で SPICE にして計算（ngspice）
-kicad-local review 新しい版 前の版 --out 確認/        # ERC・DRC・3D・差分・計算を 1 回で → 報告.md
+kicad-plus sch 入力.kicad_sch 出力.kicad_sch 手順   # 回路図を画面なしで直す（保存後に接続と部品表の差・ERC）
+kicad-plus pcbsync 回路図 基板 出力                # 回路図の変更を基板へ
+kicad-plus pcb update-from-schematic --dry-run --json 基板.kicad_pcb   # 同じことを kicad-cli 風に。--dry-run は変わる所だけ、書いたら DRC の照合まで
+kicad-plus fabdiff 前.kicad_pcb 後.kicad_pcb 比較/  # 製造データを層ごとに比べ、差分画像と場所の一覧
+kicad-plus sim run 手順.toml --out 結果/            # 回路図から自動で SPICE にして計算（ngspice）
+kicad-plus review 新しい版 前の版 --out 確認/        # ERC・DRC・3D・差分・計算を 1 回で → 報告.md
 ```
 
 `--instructions` を付けると、同じ操作を KiCad の画面で人が再現できる手順書も出ます。
@@ -109,21 +109,21 @@ wxWidgets・OpenCASCADE・ngspice などの共通の部品と、部品ライブ�
    sha256sum -c kicad-ja-plus-10.0.6-linux-x86_64.tar.gz.sha256
    tar xzf kicad-ja-plus-10.0.6-linux-x86_64.tar.gz
    export PATH="$PWD/kicad-ja-plus-10.0.6-linux-x86_64/bin:$PATH"
-   kicad-local help
+   kicad-plus help
    kicad-ja-plus-10.0.6-linux-x86_64/package/check-linux.sh   # 中身と動作の確かめ（数十秒）
-   kicad-local test        # 回帰試験。全部 OK なら入れ方は正しい
+   kicad-plus test        # 回帰試験。全部 OK なら入れ方は正しい
    ```
 
-3. 画面は `pcbnew-ja`（基板エディタ）・`eeschema-ja`（回路図エディタ）・`kicad-ja`（プロジェクトマネージャー）で起動します
+3. 画面は `pcbnew-plus`（基板エディタ）・`eeschema-plus`（回路図エディタ）・`kicad-plus-gui`（プロジェクトマネージャー）で起動します
    （WSL2 は WSLg の画面に出ます）。Python からは `kicad-python -c "import pcbnew; print(pcbnew.Version())"`。
 
-- KiCad を一度も起動していない環境では、先に `kicad-ja` か本家の `kicad` を一度起動して初めの設定（ライブラリの表）を済ませます。
+- KiCad を一度も起動していない環境では、先に `kicad-plus-gui` か本家の `kicad` を一度起動して初めの設定（ライブラリの表）を済ませます。
 - 入口（`bin/`）は、展開した中の `build/` を自動で使います。ほかの場所の `bin/`（git で取ったこのリポジトリなど）から使うときは
   `export KICAD_LOCAL_BUILD=<展開した場所>/build` を設定します。
 - 本家の KiCad を別の系列（例: 10.0.6 版に KiCad 8 の PPA）にしたときは、足りない共通の部品を `sudo apt install $(cat DEPENDS-apt.txt)` で入れます。
-  ただし `kicad-local test` などはシステムの `kicad-cli` と比べるので、同じ系列でないと失敗します。
+  ただし `kicad-plus test` などはシステムの `kicad-cli` と比べるので、同じ系列でないと失敗します。
 
-全体の自動配線（`kicad-local autoroute`）の [Freerouting](https://github.com/freerouting/freerouting) 2.4.1（GPL-3.0）と、
+全体の自動配線（`kicad-plus autoroute`）の [Freerouting](https://github.com/freerouting/freerouting) 2.4.1（GPL-3.0）と、
 それだけを動かす最小の Java（Temurin 25 から jlink）も同梱しています（`build/freerouting/`。出どころと使用許諾は中の README.txt）。
 Java の入っていない環境でもそのまま動きます。別の jar や java を使うときは `--jar`・`FREEROUTING_JAR`・`FREEROUTING_JAVA` で指定します。
 Windows 版にも同じものが `<KiCad>\freerouting\` にあり、`<KiCad>\bin\freerouting.cmd`（スタートメニューの Freerouting）で起動できます。
@@ -160,7 +160,7 @@ Windows 版にも同じものが `<KiCad>\freerouting\` にあり、`<KiCad>\bin
 
    ```
    export PATH="$PWD/bin:$PATH"
-   kicad-local help
+   kicad-plus help
    ```
 
    ビルドした場所は `KICAD_LOCAL_BUILD` で指定します（既定は `~/src/build-10.0.6`。8.0.9 なら `export KICAD_LOCAL_BUILD=~/src/build-8.0.9`）。
@@ -170,7 +170,7 @@ Windows 版にも同じものが `<KiCad>\freerouting\` にあり、`<KiCad>\bin
 ## 試験
 
 ```
-kicad-local test        # = test/regress.sh（数十秒）
+kicad-plus test        # = test/regress.sh（数十秒）
 ```
 
 KiCad 8.0.9 に付いてくるデモの基板（pic_programmer）と回路図（interf_u）で、配線の手順を流して結果を基準（`test/baseline/`）と比べ、
@@ -182,7 +182,7 @@ KiCad 8.0.9 に付いてくるデモの基板（pic_programmer）と回路図（
 |---|---|
 | `patches/10.0.6/` | KiCad 10.0.6 への改良（番号順のパッチ。本家の MR は作者の名前つき） |
 | `patches/8.0.9/` | KiCad 8.0.9 への改良。`ALL-combined.patch` が全部をまとめたもの。番号付きのパッチは来歴の記録 |
-| `bin/` | 入口（`kicad-local`、`kicad-route`、`kicad-gerber`、`kicad-cli-local`、`kicad-python`）と画面の起動（`pcbnew-ja`・`eeschema-ja`・`kicad-ja`） |
+| `bin/` | 入口（`kicad-plus`、`kicad-route`、`kicad-gerber`、`kicad-cli-plus`、`kicad-python`）と画面の起動（`pcbnew-plus`・`eeschema-plus`・`kicad-plus-gui`） |
 | `tools/` | Python の道具（review・lint・sch・sim・pcbsync・silkfix ほか） |
 | `test/` | 回帰試験 |
 | `package/` | 配布物を作るスクリプト（`linux.sh`：ビルドした場所から tar.gz を作る、`check-linux.sh`：展開した物の確かめ） |

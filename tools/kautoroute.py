@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""kicad-local autoroute: 基板全体を Freerouting で自動配線する（画面なし。pcbnew を使う。kicad-python で動かす）
+"""kicad-plus autoroute: 基板全体を Freerouting で自動配線する（画面なし。pcbnew を使う。kicad-python で動かす）
 
 使い方:
-  kicad-local autoroute <入力.kicad_pcb> <出力.kicad_pcb> [--passes 20] [--timeout 600] [--threads N]
+  kicad-plus autoroute <入力.kicad_pcb> <出力.kicad_pcb> [--passes 20] [--timeout 600] [--threads N]
                         [--rip-up] [--jar freerouting.jar] [--json]
 
 流れ: 元の基板の未配線を数える → DSN に書き出す → Freerouting（画面なし）→ SES を取り込む →
@@ -65,7 +65,7 @@ def find_java(jar):
 
 def drc(path):
     out = Path(tempfile.mkdtemp()) / "drc.json"
-    subprocess.run(["kicad-cli-local", "pcb", "drc", "--format", "json", "-o", str(out), str(path)],
+    subprocess.run(["kicad-cli-plus", "pcb", "drc", "--format", "json", "-o", str(out), str(path)],
                    capture_output=True, text=True)
     return json.loads(out.read_text(encoding="utf-8")) if out.exists() else None
 

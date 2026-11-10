@@ -1,4 +1,4 @@
-# kbom: 品番の中のリードの間隔の符号(kicad-local bom check)
+# kbom: 品番の中のリードの間隔の符号(kicad-plus bom check)
 # メーカーの資料で確かめたものだけを書く。pattern の最初の ( ) が符号、codes が 符号 → 間隔 [mm]。
 # 表に無い符号は判定しない(推測しない)。
 

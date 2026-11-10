@@ -10,6 +10,16 @@ KICAD_LOCAL_BUILD=${KICAD_LOCAL_BUILD:-$HOME/src/build-10.0.6}
 export KICAD_LOCAL_HOME KICAD_LOCAL_BUILD
 # 文字コードが UTF-8 でない環境（LANG が無い docker など）では、日本語の文字列を扱うところで落ちる（kicad_route ほか）ので UTF-8 に
 case "$(locale charmap 2>/dev/null)" in UTF-8) ;; *) export LC_ALL=C.UTF-8 ;; esac
+# 改良版のビルドが無い（本家の KiCad だけの）環境: 本家の kicad-cli で動く範囲で動かす。
+# KICAD_RUN_FROM_BUILD_DIR を立てると本家の kicad-cli が /usr/eeschema/_eeschema.kiface を探して落ちる
+if [ ! -x "$KICAD_LOCAL_BUILD/kicad/kicad-cli" ]; then
+  if [ "$1" = pcb ] && [ "$2" = update-from-schematic ]; then
+    shift 2; PATH="$KICAD_LOCAL_HOME/bin:$PATH" exec kicad-python "$KICAD_LOCAL_HOME/tools/pcbsync.py" "$@"
+  fi
+  sys_cli=$(command -v kicad-cli) || { echo "kicad-cli が無い: 改良版のビルド（$KICAD_LOCAL_BUILD）も本家の KiCad も見つからない。kicad-local doctor で確かめる" >&2; exit 2; }
+  export KICAD_LOCAL_MODE=system
+  exec "$sys_cli" "$@"
+fi
 export KICAD_RUN_FROM_BUILD_DIR=1
 export KICAD8_FOOTPRINT_DIR=/usr/share/kicad/footprints
 export KICAD9_FOOTPRINT_DIR=/usr/share/kicad/footprints

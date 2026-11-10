@@ -8,4 +8,9 @@ KICAD_LOCAL_BUILD=${KICAD_LOCAL_BUILD:-$HOME/src/build-10.0.6}
 export KICAD_LOCAL_HOME KICAD_LOCAL_BUILD
 # 文字コードが UTF-8 でない環境（LANG が無い docker など）では、日本語の文字列を扱うところで落ちる（kicad_route ほか）ので UTF-8 に
 case "$(locale charmap 2>/dev/null)" in UTF-8) ;; *) export LC_ALL=C.UTF-8 ;; esac
-PYTHONPATH="$KICAD_LOCAL_BUILD/pcbnew${PYTHONPATH:+:$PYTHONPATH}" exec python3 "$@"
+# 改良版のビルドが無ければ本家の pcbnew（/usr/lib/python3/dist-packages）を使う
+if ls "$KICAD_LOCAL_BUILD"/pcbnew/_pcbnew*.so >/dev/null 2>&1; then
+  PYTHONPATH="$KICAD_LOCAL_BUILD/pcbnew${PYTHONPATH:+:$PYTHONPATH}" exec python3 "$@"
+fi
+export KICAD_LOCAL_MODE=system
+exec python3 "$@"

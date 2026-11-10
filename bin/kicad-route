@@ -18,4 +18,8 @@ export KICAD10_SYMBOL_DIR=${KICAD10_SYMBOL_DIR:-/usr/share/kicad/symbols}
 export KICAD8_3DMODEL_DIR=${KICAD8_3DMODEL_DIR:-/usr/share/kicad/3dmodels}
 export KICAD9_3DMODEL_DIR=${KICAD9_3DMODEL_DIR:-/usr/share/kicad/3dmodels}
 export KICAD10_3DMODEL_DIR=${KICAD10_3DMODEL_DIR:-/usr/share/kicad/3dmodels}
+[ -x "$KICAD_LOCAL_BUILD/qa/tools/pns/kicad_route" ] || {
+  echo "kicad-route（配線・部品の移動・findspace・drag・silk）は改良版のビルドが要る: $KICAD_LOCAL_BUILD/qa/tools/pns/kicad_route が無い。" >&2
+  echo "配布版（https://github.com/monyuonyu/kicad-ja-plus/releases/latest）を入れるか、kicad-local doctor で使える命令を確かめる" >&2
+  exit 2; }
 exec "$KICAD_LOCAL_BUILD/qa/tools/pns/kicad_route" "$@"

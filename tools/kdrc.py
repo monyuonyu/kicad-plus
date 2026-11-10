@@ -13,6 +13,9 @@
 
 終了コード: 0 = 要確認の項目なし、1 = あり、2 = 使い方の誤り・DRC を実行できない
 回路図がある場合は、回路図との整合（--schematic-parity）も必ず調べる。
+1 つの部品の中だけで起きる違反（USB-C の受け口の取り付け穴と GND のパッドの hole_clearance など）は
+「部品のライブラリ由来」として分けて出し、要確認には数えない。配置や配線では直せないので、製造先の
+ルールと照らして判断する（JSON は from_footprint_library）。
 """
 import argparse
 import collections
@@ -31,6 +34,11 @@ import sx  # noqa: E402
 # 参考扱い（要確認に数えない）: ライブラリとの差分・シルクの警告
 NOISE = ("lib_footprint_mismatch", "lib_footprint_issues", "silk_edge_clearance", "silk_overlap",
          "silk_over_copper", "lib_symbol_issues")
+# 部品の形そのものが決める種類（同じ部品の中だけなら、ライブラリ由来）
+FOOTPRINT_TYPES = ("hole_clearance", "hole_to_hole", "clearance", "solder_mask_bridge", "drill_out_of_range",
+                   "annular_width", "connection_width", "starved_thermal")
+OF_REF = re.compile(r" of (\S+?)(?: on |$)")
+NET_IN = re.compile(r"\[([^\]]*)\]")
 TOL_MM = 0.0005   # 幅の比べ方の許容（丸め）
 
 
@@ -190,6 +198,36 @@ def narrow_tracks(board, pro_path):
     return issues, None
 
 
+def footprint_of(v):
+    """違反の項目が全部 1 つの部品のもの（"Pad A1 [GND] of J_USB on F.Cu"、"NPTH pad of J_USB"）ならその参照"""
+    if v.get("type") not in FOOTPRINT_TYPES:
+        return None
+    refs, nets = set(), set()
+    for i in v.get("items", []):
+        desc = i.get("description", "")
+        m = OF_REF.search(desc)
+        if not m:
+            return None
+        refs.add(m.group(1))
+        n = NET_IN.search(desc)
+        if n and n.group(1) != "<no net>":
+            nets.add(n.group(1))
+    # 同じ部品でも、違うネットのパッドどうしが近いのは割り当ての誤り（回路図の側で直せる）なので分けない
+    if v["type"] in ("clearance", "solder_mask_bridge") and len(nets) > 1:
+        return None
+    return refs.pop() if len(refs) == 1 else None
+
+
+def split_library(d):
+    """DRC の違反から部品のライブラリ由来のものを抜き出す（d を書き換える）"""
+    keep, lib = [], []
+    for v in d.get("violations", []):
+        ref = footprint_of(v)
+        (lib if ref else keep).append(dict(v, footprint=ref) if ref else v)
+    d["violations"] = keep
+    return lib
+
+
 def vkey(v):
     p = v.get("pos") or (v.get("items") or [{}])[0].get("pos") or {}
     return (v.get("type"), round(p.get("x", 0), 2), round(p.get("y", 0), 2))
@@ -212,7 +250,7 @@ def items_text(v):
     return " ⇔ ".join(i.get("description", "")[:48] for i in v.get("items", [])[:2])
 
 
-def human(d, strict, note):
+def human(d, strict, note, lib):
     def show(title, arr):
         c = collections.Counter(v["type"] for v in arr)
         main = [v for v in arr if v["type"] not in NOISE]
@@ -228,6 +266,12 @@ def human(d, strict, note):
     show("DRC 違反", d.get("violations", []))
     show("未配線", d.get("unconnected_items", []))
     show("回路図との不一致", d.get("schematic_parity", []))
+    if lib:
+        c = collections.Counter((v["footprint"], v["type"]) for v in lib)
+        print(f"部品のライブラリ由来: {len(lib)} 件（1 つの部品の中だけ。配置では直せないので、製造先のルールと照らす）")
+        for (ref, t), n in sorted(c.items()):
+            ex = next(v for v in lib if v["footprint"] == ref and v["type"] == t)
+            print(f"    {ref} {t}: {n}  例: {items_text(ex)}")
     if strict is not None:
         print(f"厳しい確認: {len(strict)} 件")
         for kind in ("netless_pad", "narrow_track", "stale_zone_fill"):
@@ -263,6 +307,7 @@ def main():
         load_net_names(tree)
         narrow, note = narrow_tracks(tree, board.with_suffix(".kicad_pro"))
         strict = netless_pads(tree, schematic_pins(board)) + narrow + stale_zones(board, d)
+    lib = split_library(d)  # stale_zones は分ける前の全部で比べる
 
     bad = [v for v in d.get("violations", []) if v["type"] not in NOISE]
     bad += d.get("unconnected_items", []) + [v for v in d.get("schematic_parity", []) if v["type"] not in NOISE]
@@ -271,7 +316,8 @@ def main():
     if a.json:
         out = {"board": str(board), "ok": problems == 0, "problems": problems,
                "violations": d.get("violations", []), "unconnected_items": d.get("unconnected_items", []),
-               "schematic_parity": d.get("schematic_parity", []), "noise_types": list(NOISE)}
+               "schematic_parity": d.get("schematic_parity", []), "noise_types": list(NOISE),
+               "from_footprint_library": lib}
         if strict is not None:
             out["strict"] = strict
             if note:
@@ -279,7 +325,7 @@ def main():
         json.dump(out, sys.stdout, ensure_ascii=False, indent=1)
         print()
     else:
-        human(d, strict, note)
+        human(d, strict, note, lib)
         m = re.search(r"\(pcbplotparams.*?\(drillshape\s+(\d+)\)", board.read_text(encoding="utf-8"), re.S)
         if m and m.group(1) != "0":
             print(f"参考: 製造データの出力設定でドリルマークが「あり」(drillshape {m.group(1)})。このままガーバーを出すと"

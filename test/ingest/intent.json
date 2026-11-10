@@ -1,0 +1,11 @@
+{
+ "nets": {
+  "VBUS": {"role": "power", "voltage": 5.0, "current": 1.5, "source": "J_USB", "netclass": "Power"},
+  "V3V3": {"role": "power", "voltage": 3.3, "current": 0.3, "source": "U_LDO"},
+  "GND": {"role": "ground"}
+ },
+ "placement": [
+  {"ref": "J_USB", "edge": "any", "side": "top"},
+  {"ref": "C_IN", "near": "U_LDO", "max_mm": 5}
+ ]
+}

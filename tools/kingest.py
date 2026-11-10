@@ -363,6 +363,7 @@ def load_board(path):
         os.close(keep)
 
 
+SIDE_JA = {"left": "左", "right": "右", "top": "上", "bottom": "下"}
 PLACE = re.compile(r"place (\S+) (-?[\d.]+),(-?[\d.]+) (-?[\d.]+)")
 
 
@@ -384,25 +385,37 @@ def place_on_edges(out, b, rows):
         ang = round(f.GetOrientationDegrees()) % 360
         lim = float(r.get("max_mm", 1.5))
         side = r["edge"] if r["edge"] != "any" else row["edge_side"]
-        # 中心の帯（部品の外形が縁から 0〜lim mm に入る範囲）
         l, t, rr, bt = cx - x0, cy - y0, x1 - cx, y1 - cy
-        band = {"left": (E[0] + l, E[1] + t, E[0] + l + lim, E[3] - bt),
-                "right": (E[2] - rr - lim, E[1] + t, E[2] - rr, E[3] - bt),
-                "top": (E[0] + l, E[1] + t, E[2] - rr, E[1] + t + lim),
-                "bottom": (E[0] + l, E[3] - bt - lim, E[2] - rr, E[3] - bt)}[side]
-        q = subprocess.run([route, str(out), "-", "-"], input=f"findspace {ref} 0.25 " + ",".join(f"{v:.3f}" for v in band) + "\n",
-                           capture_output=True, text=True, timeout=600)
-        cands = [(float(x), float(y), round(float(a)) % 360) for rf, x, y, a in PLACE.findall(q.stdout) if rf == ref]
-        same = [c for c in cands if c[2] == ang]
+        inset = 0.3   # findspace は外形枠を基板の縁から 0.3 mm 内側に収める
+
+        def band_of(w):
+            """中心の帯（部品の外形が縁から inset〜inset+w mm に入る範囲）"""
+            return {"left": (E[0] + l + inset, E[1] + t, E[0] + l + inset + w, E[3] - bt),
+                    "right": (E[2] - rr - inset - w, E[1] + t, E[2] - rr - inset, E[3] - bt),
+                    "top": (E[0] + l, E[1] + t + inset, E[2] - rr, E[1] + t + inset + w),
+                    "bottom": (E[0] + l, E[3] - bt - inset - w, E[2] - rr, E[3] - bt - inset)}[side]
+
         rec = {"ref": ref, "edge": side, "from": [round(cx, 2), round(cy, 2)]}
-        if not same:
-            rec.update(ok=False, why="縁に沿った帯に、今の向きのまま置ける空きが無い" if q.returncode == 0 or cands
+        best, ran = None, False
+        # 縁に近い細い帯から探し、無ければ広げる（findspace は 8 か所しか出さず、近い候補はまとめるので）
+        for w in sorted({0.25, 0.5, max(lim - inset, 0.25)}):
+            if w > max(lim - inset, 0.25):
+                continue
+            band = band_of(w)
+            q = subprocess.run([route, str(out), "-", "-"],
+                               input=f"findspace {ref} 0.25 " + ",".join(f"{v:.3f}" for v in band) + "\n",
+                               capture_output=True, text=True, timeout=600)
+            ran = ran or "置き場所" in q.stdout
+            same = [(float(x), float(y), round(float(a)) % 360) for rf, x, y, a in PLACE.findall(q.stdout)
+                    if rf == ref and round(float(a)) % 360 == ang]
+            if same:
+                best = same[0]   # 帯の中では配線の短い順
+                break
+        if best is None:
+            rec.update(ok=False, why="縁に沿った帯に、今の向きのまま置ける空きが無い" if ran
                        else "kicad-route を動かせない（改良版のビルドが要る。kicad-local doctor）")
             done.append(rec)
             continue
-        dist = {"left": lambda c: c[0] - band[0], "right": lambda c: band[2] - c[0],
-                "top": lambda c: c[1] - band[1], "bottom": lambda c: band[3] - c[1]}[side]
-        best = min(same, key=lambda c: round(dist(c) * 2) / 2)   # 縁に近い順（0.5 mm 刻み）、同じなら配線の短い順
         tmp = out.with_name(out.stem + ".ingest-tmp.kicad_pcb")
         q = subprocess.run([route, str(out), str(tmp), "-"], input=f"place {ref} {best[0]:.3f},{best[1]:.3f} {best[2]}\n",
                            capture_output=True, text=True, timeout=600)
@@ -535,7 +548,7 @@ def main():
         if a.place and any(not x["ok"] for x in rep["placement"]):
             rep["placed"] = place_on_edges(out, b, rep["placement"])
             for x in rep["placed"]:
-                say(f"  動かした {x['ref']}: {x['from']} → {x['to']}（{x['edge']}の縁）" if x["ok"]
+                say(f"  動かした {x['ref']}: {x['from']} → {x['to']}（{SIDE_JA[x['edge']]}の縁）" if x["ok"]
                     else f"  ! {x['ref']} を縁へ動かせなかった: {x['why']}")
             if any(x["ok"] for x in rep["placed"]):
                 b = load_board(out)

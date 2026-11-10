@@ -1,0 +1,102 @@
+From 02c5bcf4e7ef6e208b95d95066fc37300d956278 Mon Sep 17 00:00:00 2001
+From: shota <monyuonyu@gmail.com>
+Date: Tue, 10 Nov 2026 10:07:48 +0900
+Subject: [PATCH] =?UTF-8?q?kicad=5Froute:=20=E3=83=AB=E3=83=BC=E3=82=BF?=
+ =?UTF-8?q?=E3=83=BC=E3=81=A7=E5=8B=95=E3=81=8B=E3=81=9B=E3=81=AA=E3=81=84?=
+ =?UTF-8?q?=E9=83=A8=E5=93=81=E3=81=AF=E3=80=81=E7=B7=9A=E3=81=8C=E7=84=A1?=
+ =?UTF-8?q?=E3=81=8F=E7=BD=AE=E3=81=8D=E5=85=88=E3=81=8C=E7=A9=BA=E3=81=84?=
+ =?UTF-8?q?=E3=81=A6=E3=81=84=E3=82=8C=E3=81=B0=E3=81=9D=E3=81=AE=E3=81=BE?=
+ =?UTF-8?q?=E3=81=BE=E5=8B=95=E3=81=8B=E3=81=99?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+USB-C の受け口（USB4105）は自分のパッドと取り付け穴が近く、押しのけルーターの部品の移動（place・drag）が
+線の無いときでも失敗していた。つながる線が無く、findspace と同じ確かめ（外形枠・銅箔のクリアランス・基板の内側）
+を通れば、ルーターを通さずに動かす（注意を出す）。
+---
+ qa/tools/pns/kicad_route_main.cpp | 51 +++++++++++++++++++++++++++++--
+ 1 file changed, 48 insertions(+), 3 deletions(-)
+
+diff --git a/qa/tools/pns/kicad_route_main.cpp b/qa/tools/pns/kicad_route_main.cpp
+index c031e39..717b297 100644
+--- a/qa/tools/pns/kicad_route_main.cpp
++++ b/qa/tools/pns/kicad_route_main.cpp
+@@ -1121,6 +1121,11 @@ static std::set<FOOTPRINT*> overlappedRefs( CTX& c )
+ }
+ 
+ 
++// ルーターで動かせない部品(自分のパッドどうしが近すぎる USB-C の受け口など)を、つながる線が無く、置き先が
++// 空いているときだけ、そのまま動かす(定義は fitsAt の後)
++static bool moveDirectly( CTX& c, FOOTPRINT* aFp, const VECTOR2I& aDelta, wxString* aWhy );
++
++
+ static bool doDrag( CTX& c, const wxString& aRef, const VECTOR2I& aDelta )
+ {
+     FOOTPRINT* fp = findFp( c.board, aRef );
+@@ -1170,12 +1175,24 @@ static bool doDrag( CTX& c, const wxString& aRef, const VECTOR2I& aDelta )
+ 
+     if( !c.router->FixRoute( p0 + aDelta, nullptr, false, false ) )
+     {
+-        msg( "  %d行: NG %s を動かせない(つながった線を迂回・押しのけで引き直せない)\n", aRef );
+         c.router->StopRouting();
+-        return false;
++        wxString why;
++
++        if( !moveDirectly( c, fp, aDelta, &why ) )
++        {
++            msg( "  %d行: NG %s\n", aRef + wxS( " を動かせない(つながった線を迂回・押しのけで引き直せない" )
++                                     + ( why.IsEmpty() ? wxString( wxS( "" ) ) : wxS( "。" ) + why ) + wxS( ")" ) );
++            return false;
++        }
++
++        msg( "  %d行: 注意 %s\n", aRef + wxS( " はルーターでは動かせなかった。つながる線が無く置き先も空いているので、"
++                                             "そのまま動かした" ) );
++    }
++    else
++    {
++        c.router->StopRouting();
+     }
+ 
+-    c.router->StopRouting();
+     fp->BuildCourtyardCaches();
+     c.dirty = true;
+ 
+@@ -1361,6 +1378,34 @@ static bool fitsAt( CTX& c, FOOTPRINT* aFp, FP_AT_ROT& aShapes, const VECTOR2I&
+ }
+ 
+ 
++static bool moveDirectly( CTX& c, FOOTPRINT* aFp, const VECTOR2I& aDelta, wxString* aWhy )
++{
++    for( PCB_TRACK* t : c.board->Tracks() )
++    {
++        for( PAD* pad : aFp->Pads() )
++        {
++            if( pad->GetNetCode() > 0 && t->GetNetCode() == pad->GetNetCode()
++                && ( pad->HitTest( t->GetStart() ) || pad->HitTest( t->GetEnd() ) ) )
++            {
++                if( aWhy ) *aWhy = wxS( "つながる線がある" );
++                return false;
++            }
++        }
++    }
++
++    BOX2I edge = c.board->GetBoardEdgesBoundingBox();
++    edge.Inflate( -pcbIUScale.mmToIU( 0.3 ) );
++    FP_AT_ROT shapes = shapesAtRotation( aFp, aFp->GetOrientation() );
++    std::vector<OBST> obs = collectObstacles( c.board, aFp );
++
++    if( !fitsAt( c, aFp, shapes, aFp->GetPosition() + aDelta, obs, clearanceOf( c.board ), edge, aWhy ) )
++        return false;
++
++    aFp->Move( aDelta );
++    return true;
++}
++
++
+ static double ratsnestMm( CTX& c, FOOTPRINT* aFp, const FP_AT_ROT& aShapes, const VECTOR2I& aPos )
+ {
+     double total = 0;
+-- 
+2.43.0
+

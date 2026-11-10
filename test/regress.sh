@@ -154,6 +154,14 @@ chk "kicad-cli の引数の誤りを最後にもう一度(標準エラー、終�
 # ksim のモデルの出どころ: 値の対応で別の品物(P6KE39A を 6.8V 品)・値が記号の名前・状態を決めていないスイッチは未確認
 chk "ksim: モデルの出どころと未確認(黙って代用しない)" "python3 tests/ksim_provenance_test.py $KICAD_LOCAL_HOME/tools/ksim | grep -q ok"
 
+# 別の道具の基板の取り込み（Zener 風: 部品番号 J1 に欄 Path=J_USB、未使用の端子のネットが NC_J_USB_…、ネット名に / が無い、
+# PWR_FLAG が無い）。取り込んだ直後に power_pin_not_driven 0・net_conflict 0、VBUS の配線は残り、J_USB は縁の約束を守れていない
+chk "kicad-local ingest(PWR_FLAG・ネット名・未接続の印。power_pin_not_driven 0・net_conflict 0、配線は残る)" "rm -rf now/ingest; kicad-local ingest ingest/probe.kicad_sch ingest/probe.kicad_pcb --out now/ingest/probe.kicad_pcb --intent ingest/intent.json --json > now/ingest.json; python3 -c \"import json; d=json.load(open('now/ingest.json')); c=d['counts']; assert c['power_pin_not_driven']==0 and c['net_conflict']==0, c; assert len(d['pwr_flag']['added'])==2 and len(d['no_connect']['added'])==7, (d['pwr_flag'], d['no_connect']); assert {'old':'VBUS','new':'/VBUS'} in d['sync']['renamed_nets'] and d['sync']['tracks_removed']==0; assert not [v for v in d['erc']['violations'] if v['type'] in ('pin_not_connected','power_pin_not_driven')]; p=[x for x in d['placement'] if x['rule']['ref']=='J_USB'][0]; assert p['ref']=='J1' and not p['ok'], p\" && grep -q '(segment' now/ingest/probe.kicad_pcb"
+chk "kicad-local ingest --place(J_USB を向きそのまま縁へ。ルーターで動かせない部品は線が無ければそのまま)" "kicad-local ingest ingest/probe.kicad_sch ingest/probe.kicad_pcb --out now/ingest/placed.kicad_pcb --intent ingest/intent.json --place --json > now/ingest_place.json; python3 -c \"import json; d=json.load(open('now/ingest_place.json')); assert [x for x in d['placed'] if x['ref']=='J1' and x['ok']], d['placed']; p=[x for x in d['placement'] if x['rule']['ref']=='J_USB'][0]; assert p['ok'] and p['edge_gap_mm']<=1.5, p\""
+chk "kicad-local lint: 標準のライブラリに無い記号(Zener 風)でも種類を推して点検(出力のコンデンサ抜け)" "kicad-local lint ingest/zen_lint.kicad_sch | grep -q 'VOUT 端子(/V3V3)に GND へのコンデンサが無い'"
+chk "kicad-local erc: 項目にネット名(電源記号は値、ラベルは名前)" "kicad-local erc ingest/probe.kicad_sch --json > now/erc_nets.json; python3 -c \"import json; d=json.load(open('now/erc_nets.json')); n=sum([v['nets'] for v in d['violations'] if v['type']=='power_pin_not_driven'],[]); assert '/VBUS' in n and '/GND' in n, d['violations']\""
+chk "kicad-local drc: 部品のライブラリ由来(USB4105 の穴と GND のパッド)を分ける" "kicad-local drc ingest/usbc.kicad_pcb --json > now/drc_lib.json; python3 -c \"import json; d=json.load(open('now/drc_lib.json')); assert not [v for v in d['violations'] if v['type']=='hole_clearance'] and len([v for v in d['from_footprint_library'] if v['type']=='hole_clearance' and v['footprint']=='J_USB'])==4, d['from_footprint_library']\""
+
 # 終了コード: 配線の比較か道具の確認に NG が 1 つでもあれば 1（自動の試験が失敗を見逃さないように）
 if [ "$route_rc" -ne 0 ] || [ "$fails" -ne 0 ]; then
   echo "NG あり（配線の比較: $([ "$route_rc" -eq 0 ] && echo OK || echo NG)、道具の確認の NG: $fails 件）"

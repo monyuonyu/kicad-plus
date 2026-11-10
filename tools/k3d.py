@@ -18,8 +18,24 @@ import pcbnew
 SYS3D = "/usr/share/kicad/3dmodels"
 
 
+EMBEDDED = set()   # 基板のファイルに埋め込まれたファイルの名前（KiCad 9 以降の kicad-embed://。Zener はモデルを埋め込む）
+
+
+def load_embedded(path):
+    import re as _re
+    try:
+        text = Path(path).read_text(encoding="utf-8")
+    except OSError:
+        return
+    for blk in _re.findall(r"\(embedded_files(.*?)\n\s*\)\s*\n", text, _re.S):
+        EMBEDDED.update(_re.findall(r'\(file\s*\(name "([^"]+)"', blk))
+    EMBEDDED.update(_re.findall(r'\(file\s*\(name "([^"]+\.(?:step|stp|wrl|STEP|STP))"', text))
+
+
 def resolve(name, board_dir):
-    """モデルのファイル名を実際の場所にする。見つからなければ None"""
+    """モデルのファイル名を実際の場所にする（埋め込みは kicad-embed://名前 のまま）。見つからなければ None"""
+    if name.startswith("kicad-embed://"):
+        return name if name[len("kicad-embed://"):] in EMBEDDED else None
     def var(k, raw):
         if k == "KIPRJMOD":
             return str(board_dir)
@@ -244,6 +260,7 @@ def main():
     a = ap.parse_args()
     b = pcbnew.LoadBoard(a.pcb)
     bdir = Path(a.pcb).resolve().parent
+    load_embedded(a.pcb)
     rows = scan(b, bdir)
     if a.cmd == "check":
         return 1 if show(rows, a.json) else 0
@@ -254,11 +271,11 @@ def main():
     # 写しは別の場所に書くので、基板からの相対・${KIPRJMOD} の指定は見つかった場所(絶対)に書き換える
     for r in rows:
         f = fps[r["ref"]]
-        if any(m["found"] and ("KIPRJMOD" in m["file"] or not re.match(r"[\\/$~]|[A-Za-z]:", m["file"])) for m in r["models"]):
+        if any(m["found"] and not m["file"].startswith("kicad-embed://") and ("KIPRJMOD" in m["file"] or not re.match(r"[\\/$~]|[A-Za-z]:", m["file"])) for m in r["models"]):
             ms = [pcbnew.FP_3DMODEL(m) for m in f.Models()]
             f.Models().clear()
             for m, info in zip(ms, r["models"]):
-                if info["found"]:
+                if info["found"] and not info["found"].startswith("kicad-embed://"):
                     m.m_Filename = info["found"]
                 f.Models().push_back(m)
     made = []

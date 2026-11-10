@@ -22,7 +22,7 @@ intent.json の形（どれも省ける）:
   pwr_flag: true なら ERC が言わなくても PWR_FLAG を付ける（ERC の power_pin_not_driven のネットには必ず付く）
   netclass: そのネットのネットクラス。netclasses に無いクラスは、current から IPC-2221 で幅を出して作る
 
-部品は部品番号（J1）でも、生成元の名前（Zener の J_USB。フットプリントの欄 Path が J_USB か ….J_USB）でもよい。
+部品は部品番号（J1）でも、生成元の名前（Zener の J_USB・C_IN。フットプリントの欄 Path が J_USB・C_IN.C・Power.C_IN など）でもよい。
 ネットは見た目の名前で比べ、先頭の / の有無は問わない（VBUS = /VBUS）。
 """
 import json
@@ -107,7 +107,18 @@ def resolve_ref(name, refs, paths):
     見つからない・2 つ以上に当たるときは None"""
     if name in refs:
         return name
-    hit = [r for r, p in paths.items() if p and (p == name or p.endswith("." + name))]
+    # Zener の Path は「生成元の名前.下位の名前」（C_IN.C・D_LED.LED）や「上位.名前」（Power.R1）。
+    # 区切り（.）で分けた並びの中に name の並びがそのままあれば当たり
+    want = name.split(".")
+
+    def has(p):
+        seg = p.split(".")
+        return any(seg[i:i + len(want)] == want for i in range(len(seg) - len(want) + 1))
+
+    hit = [r for r, p in paths.items() if p and has(p)]
+    if len(hit) > 1:   # 複数に当たるなら、名前で始まるもの（C_IN.C）を優先
+        first = [r for r in hit if paths[r].split(".")[:len(want)] == want]
+        hit = first if len(first) == 1 else hit
     return hit[0] if len(hit) == 1 else None
 
 

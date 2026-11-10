@@ -220,7 +220,8 @@ def lint(sch):
 
     # ---- つながり
     for net, nodes in nets.items():
-        if len(nodes) == 1 and not net.startswith("unconnected"):
+        # 生成元が「つながない」と名前で示したネット（Zener の NC_J_USB_SBU1）も、つなぎ忘れではない
+        if len(nodes) == 1 and not net.startswith("unconnected") and not net.lstrip("/").startswith("NC_"):
             r, p, f = nodes[0]
             add("つながり", net, f"端子が 1 つだけ({r}.{p})。つなぎ忘れか、ラベルの綴り違い")
     return out, comps

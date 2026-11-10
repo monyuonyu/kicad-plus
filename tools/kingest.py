@@ -107,7 +107,11 @@ def copy_project(sch, pcb, out):
     for name in ("sym-lib-table", "fp-lib-table"):
         for src_dir in (sch.parent, pcb.parent):
             if (src_dir / name).is_file() and not (out.parent / name).exists():
-                shutil.copyfile(src_dir / name, out.parent / name)
+                text = (src_dir / name).read_text(encoding="utf-8")
+                if src_dir != out.parent:
+                    # ${KIPRJMOD} は写した先を指すので、元の場所の絶対パスに（Zener は ${KIPRJMOD}/../.pcb/stdlib/… と書く）
+                    text = text.replace("${KIPRJMOD}", str(src_dir))
+                (out.parent / name).write_text(text, encoding="utf-8")
     pro = out.with_suffix(".kicad_pro")
     for cand in (pcb.with_suffix(".kicad_pro"), sch.with_suffix(".kicad_pro"), TEMPLATE_PRO):
         if cand.is_file() and cand.resolve() != pro:
@@ -287,6 +291,42 @@ def fp_box(f):
     return (pcbnew.ToMM(bb.GetLeft()), pcbnew.ToMM(bb.GetTop()), pcbnew.ToMM(bb.GetRight()), pcbnew.ToMM(bb.GetBottom()))
 
 
+EDGE_WORDS = ("pcb edge", "board edge")
+
+
+def edge_marker(f):
+    """縁に付ける部品（USB-C の受け口など）の「PCB Edge」の印の線。KiCad のライブラリはコネクタの口の側に
+    Dwgs.User の線と「PCB Edge」の文字を描く。返り値: (向き left/right/top/bottom、線の座標 mm（縦横の
+    どちらか）, 線の端 2 つ) か None。向きは部品の原点から線へ向かう向き（口が向く側）"""
+    texts, lines = [], []
+    for g in f.GraphicalItems():
+        if g.GetLayer() != pcbnew.Dwgs_User:
+            continue
+        if isinstance(g, pcbnew.PCB_TEXT):
+            if any(w in g.GetText().lower() for w in EDGE_WORDS):
+                texts.append(g.GetPosition())
+        elif g.GetShape() == pcbnew.SHAPE_T_SEGMENT:
+            lines.append((g.GetStart(), g.GetEnd()))
+    if not texts or not lines:
+        return None
+    t = texts[0]
+
+    def dist(ln):
+        (a, b_) = ln
+        mx, my = (a.x + b_.x) / 2, (a.y + b_.y) / 2
+        return (mx - t.x) ** 2 + (my - t.y) ** 2
+    a, b_ = min(lines, key=dist)
+    o = f.GetPosition()
+    mm = pcbnew.ToMM
+    if abs(a.y - b_.y) < abs(a.x - b_.x):      # 横の線: 口は上か下
+        y = mm(a.y + b_.y) / 2
+        side = "bottom" if y > mm(o.y) else "top"
+        return side, y, ((mm(a.x), y), (mm(b_.x), y))
+    x = mm(a.x + b_.x) / 2
+    side = "right" if x > mm(o.x) else "left"
+    return side, x, ((x, mm(a.y)), (x, mm(b_.y)))
+
+
 def check_placement(b, intent):
     fps = {f.GetReference(): f for f in b.GetFootprints()}
     paths = {r: field(f, "Path") for r, f in fps.items()}
@@ -314,14 +354,26 @@ def check_placement(b, intent):
             if edge is None:
                 why.append("外形（Edge.Cuts）が無いので縁を確かめられない")
             else:
-                gaps = {"left": x0 - edge[0], "top": y0 - edge[1], "right": edge[2] - x1, "bottom": edge[3] - y1}
-                sides = list(gaps) if r["edge"] == "any" else [r["edge"]]
-                best = min(sides, key=lambda k: gaps[k])
-                row["edge_gap_mm"] = round(gaps[best], 2)
-                row["edge_side"] = best
-                if gaps[best] > lim:
-                    why.append(f"縁から {gaps[best]:.2f} mm（{ {'left': '左', 'right': '右', 'top': '上', 'bottom': '下'}[best] }の縁。"
-                               f"約束は {lim} mm 以内）")
+                mk = edge_marker(f)
+                if mk:
+                    # 口のある部品: 口がその辺を向き、印の線が縁から lim 以内（はみ出しは 0 として数えない）
+                    facing, c, _ = mk
+                    want = facing if r["edge"] == "any" else r["edge"]
+                    line_gap = {"left": c - edge[0], "top": c - edge[1], "right": edge[2] - c, "bottom": edge[3] - c}[facing]
+                    row.update(edge_side=want, facing=facing, edge_gap_mm=round(line_gap, 2), edge_marker=True)
+                    if facing != want:
+                        why.append(f"口が{SIDE_JA[facing]}を向いている（約束は{SIDE_JA[want]}の縁）")
+                    elif abs(line_gap) > lim:
+                        why.append(f"口（PCB Edge の印）が{SIDE_JA[want]}の縁から {line_gap:.2f} mm"
+                                   f"（{'内側' if line_gap > 0 else '外にはみ出し'}。約束は {lim} mm 以内）")
+                else:
+                    gaps = {"left": x0 - edge[0], "top": y0 - edge[1], "right": edge[2] - x1, "bottom": edge[3] - y1}
+                    sides = list(gaps) if r["edge"] == "any" else [r["edge"]]
+                    best = min(sides, key=lambda k: gaps[k])
+                    row["edge_gap_mm"] = round(gaps[best], 2)
+                    row["edge_side"] = best
+                    if gaps[best] > lim:
+                        why.append(f"縁から {gaps[best]:.2f} mm（{SIDE_JA[best]}の縁。約束は {lim} mm 以内）")
         if "near" in r:
             other = kintent.resolve_ref(r["near"], fps, paths)
             lim = float(r.get("max_mm", 5))
@@ -367,6 +419,45 @@ SIDE_JA = {"left": "左", "right": "右", "top": "上", "bottom": "下"}
 PLACE = re.compile(r"place (\S+) (-?[\d.]+),(-?[\d.]+) (-?[\d.]+)")
 
 
+SIDE_ANGLE = {"right": 0, "top": 90, "left": 180, "bottom": 270}   # 画面で反時計回り（KiCad の角度）
+
+
+def place_by_marker(out, b, f, row):
+    """口のある部品を、口が約束の辺を向くよう回し、PCB Edge の線が縁にぴったり重なる所へ（縁に沿った位置は
+    今のまま。はみ出す分は縁の範囲に収める）。つながる配線がある部品は動かさない（配線を引き直せないので）"""
+    ref = f.GetReference()
+    rec = {"ref": ref, "edge": row["edge_side"],
+           "from": [round(pcbnew.ToMM(f.GetPosition().x), 2), round(pcbnew.ToMM(f.GetPosition().y), 2)],
+           "rotated": 0}
+    nets = {p.GetNetCode() for p in f.Pads() if p.GetNetCode() > 0}
+    for t in b.GetTracks():
+        if t.GetNetCode() in nets and any(p.HitTest(t.GetStart()) or p.HitTest(t.GetEnd()) for p in f.Pads()):
+            rec.update(ok=False, why="つながる配線があるので動かしていない（kicad-plus route の drag で）")
+            return rec
+    eb = b.GetBoardEdgesBoundingBox()
+    E = (pcbnew.ToMM(eb.GetLeft()), pcbnew.ToMM(eb.GetTop()), pcbnew.ToMM(eb.GetRight()), pcbnew.ToMM(eb.GetBottom()))
+    want, facing = row["edge_side"], row["facing"]
+    turn = (SIDE_ANGLE[want] - SIDE_ANGLE[facing]) % 360
+    if turn:
+        f.SetOrientationDegrees((f.GetOrientationDegrees() + turn) % 360)
+        rec["rotated"] = turn
+    side, c, ((ax, ay), (bx, by)) = edge_marker(f)
+    target = {"left": E[0], "top": E[1], "right": E[2], "bottom": E[3]}[want]
+    dx = dy = 0.0
+    if want in ("left", "right"):
+        dx = target - c
+        lo, hi = min(ay, by), max(ay, by)
+        dy = max(E[1] - lo, 0) - max(hi - E[3], 0)     # 線が縁の範囲（上下）からはみ出すなら中へ
+    else:
+        dy = target - c
+        lo, hi = min(ax, bx), max(ax, bx)
+        dx = max(E[0] - lo, 0) - max(hi - E[2], 0)
+    f.Move(pcbnew.VECTOR2I(pcbnew.FromMM(dx), pcbnew.FromMM(dy)))
+    pcbnew.SaveBoard(str(out), b)
+    rec.update(ok=True, to=[round(pcbnew.ToMM(f.GetPosition().x), 2), round(pcbnew.ToMM(f.GetPosition().y), 2)])
+    return rec
+
+
 def place_on_edges(out, b, rows):
     """縁の約束を守れていない部品を、向きはそのまま、縁に沿った帯の中の空いた所へ（kicad-route の findspace と
     place。改良版のビルドが要る）。返り値: [{"ref", "from", "to", "ok", "why"}]"""
@@ -380,6 +471,9 @@ def place_on_edges(out, b, rows):
         if row["ok"] or "edge" not in r or ref is None or "edge_side" not in row:
             continue
         f = fps[ref]
+        if row.get("edge_marker"):
+            done.append(place_by_marker(out, b, f, row))
+            continue
         x0, y0, x1, y1 = fp_box(f)
         cx, cy = pcbnew.ToMM(f.GetPosition().x), pcbnew.ToMM(f.GetPosition().y)
         ang = round(f.GetOrientationDegrees()) % 360
@@ -548,7 +642,8 @@ def main():
         if a.place and any(not x["ok"] for x in rep["placement"]):
             rep["placed"] = place_on_edges(out, b, rep["placement"])
             for x in rep["placed"]:
-                say(f"  動かした {x['ref']}: {x['from']} → {x['to']}（{SIDE_JA[x['edge']]}の縁）" if x["ok"]
+                say(f"  動かした {x['ref']}: {x['from']} → {x['to']}（{SIDE_JA[x['edge']]}の縁"
+                    + (f"、{x['rotated']}° 回した" if x.get("rotated") else "") + "）" if x["ok"]
                     else f"  ! {x['ref']} を縁へ動かせなかった: {x['why']}")
             if any(x["ok"] for x in rep["placed"]):
                 b = load_board(out)

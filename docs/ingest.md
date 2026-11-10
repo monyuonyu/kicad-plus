@@ -58,3 +58,21 @@ python3 adapters/zener.py board.zen --out ingest/board.kicad_pcb --intent 追加
 追加の intent（電流・ネットクラス・配置の約束）を重ねて ingest にかける。Zener の KiCad の書き出し
 （Board(path=…) の下）は先に済ませておく（この道具は Zener を動かさない）。`--print-intent` で作った意図だけを出す。
 生成元ごとの癖（名前の付け方・書き出す場所）は adapters/ に閉じ込め、ingest は生成元を知らない。
+
+### Zener（pcbc 0.4.100）で試して分かったこと
+
+- 入れ方: リリースの `pcbc-<OS>` と `stdlib.tar.zst` の両方が要る。`pcb` は自分の置き場の上に `lib/std/pcb.toml` を
+  探すので、`stdlib.tar.zst` をバイナリの隣の `lib/std/` に展開する（無いと `could not find stdlib source`）
+- 書き出し: `pcb build board.zen` で確かめ、`pcb apply board.zen` で `Board(path=…)` の下に .kicad_sch・.kicad_pcb・
+  fp-lib-table ができる。KiCad に書き出す部品は記号が KiCad のファイルでないといけない（`Symbol(definition=[…])` の
+  手書きの記号は `has no KiCad symbol definition`）。同梱の `@stdlib/kicad-symbols/…kicad_sym` を使う
+- 出てくる物の癖（ingest で吸収済み）
+  - 記号の名前にライブラリ名が無い（`R_Small`）→ lint は記号の名前などから種類を推す
+  - 欄 Path は `C_IN.C`（生成元の名前.下位の名前）→ intent は `C_IN` のままでよい
+  - fp-lib-table は `${KIPRJMOD}/../.pcb/stdlib/…` → 写すときに元の場所の絶対パスに書き換える
+  - 3D モデルは基板に埋め込み（`kicad-embed://`）→ models は見つかった扱い
+  - 外から来る電源の power_pin_not_driven、ネット名の違いの net_conflict → PWR_FLAG とネット名の書き換えで 0
+  - 外形（Edge.Cuts）が無い → `kicad-plus finish outline` で足してから `--place`
+- 縁の約束: KiCad のコネクタの多く（Connector_USB の 75 個のうち 30 個など）は口の側に「PCB Edge」の線がある。
+  あれば、口がその辺を向くよう回し（`edge: any` なら今の口の向きの辺）、線を縁にぴったり重ねる。無い部品は外形枠を縁から
+  `max_mm` 以内の空きへ（findspace）

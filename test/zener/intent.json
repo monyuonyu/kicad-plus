@@ -1,0 +1,2 @@
+{"nets": {"VBUS": {"current": 1.5, "source": "J_USB", "netclass": "Power"}, "VBUS_F": {"current": 1.5, "netclass": "Power"}},
+ "placement": [{"ref": "J_USB", "edge": "any", "side": "top"}, {"ref": "C_IN", "near": "U_LDO", "max_mm": 4}]}

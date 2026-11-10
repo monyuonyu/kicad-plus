@@ -1,0 +1,76 @@
+"""
+probe_power: USB-C 5V から TLV75801P で 3.3V を作る、AI プローブの電源
+（kicad-ja-plus の ingest の試験台。依頼で試された回路と同じ形）
+"""
+
+Resistor = Module("@stdlib/generics/Resistor.zen")
+Capacitor = Module("@stdlib/generics/Capacitor.zen")
+Led = Module("@stdlib/generics/Led.zen")
+Tvs = Module("@stdlib/generics/Tvs.zen")
+FerriteBead = Module("@stdlib/generics/FerriteBead.zen")
+PinHeader = Module("@stdlib/generics/PinHeader.zen")
+
+VBUS = Power("VBUS", voltage="4.75V to 5.5V")
+VBUS_F = Power("VBUS_F", voltage="4.75V to 5.5V")
+V3V3 = Power("V3V3", voltage="3.2V to 3.4V")
+GND = Ground("GND")
+CC1 = Net("CC1")
+CC2 = Net("CC2")
+LDO_FB = Net("LDO_FB")
+LED_A = Net("LED_A")
+
+# USB-C の受け口（電源だけ。D+/D-・SBU は使わない）。記号とフットプリントは Zener 同梱の KiCad ライブラリ
+Component(
+    name="J_USB",
+    part=builtin.Part(mpn="USB4105-GF-A", manufacturer="GCT"),
+    symbol=Symbol("@stdlib/kicad-symbols/Connector.kicad_symdir/USB_C_Receptacle_USB2.0_16P.kicad_sym"),
+    footprint=File("@stdlib/kicad-footprints/Connector_USB.pretty/USB_C_Receptacle_GCT_USB4105-xx-A_16P_TopMnt_Horizontal.kicad_mod"),
+    prefix="J",
+    pins={
+        "VBUS": VBUS,
+        "GND": GND,
+        "SHIELD": GND,
+        "CC1": CC1,
+        "CC2": CC2,
+        "D+": Net("NC_J_USB_DP"),
+        "D-": Net("NC_J_USB_DN"),
+        "SBU1": Net("NC_J_USB_SBU1"),
+        "SBU2": Net("NC_J_USB_SBU2"),
+    },
+)
+
+# CC の 5.1k（シンクとして 5V をもらう）
+Resistor(name="R_CC1", value="5.1kohm", package="0402", P1=CC1, P2=GND)
+Resistor(name="R_CC2", value="5.1kohm", package="0402", P1=CC2, P2=GND)
+
+# 入口の TVS とフェライト
+Tvs(name="D_TVS", A=GND, K=VBUS)
+FerriteBead(name="FB1", package="0603", P1=VBUS, P2=VBUS_F)
+
+# LDO TLV75801P（WSON-6）。3.3 V = 0.55 V × (1 + 100k / 20k)
+Component(
+    name="U_LDO",
+    part=builtin.Part(mpn="TLV75801PDRVR", manufacturer="Texas Instruments"),
+    symbol=Symbol("@stdlib/kicad-symbols/Regulator_Linear.kicad_symdir/TLV75801PDRV.kicad_sym"),
+    footprint=File("@stdlib/kicad-footprints/Package_SON.pretty/WSON-6-1EP_2x2mm_P0.65mm_EP1x1.6mm.kicad_mod"),
+    prefix="U",
+    pins={"IN": VBUS_F, "GND": GND, "EN": VBUS_F, "FB": LDO_FB, "OUT": V3V3},
+)
+Capacitor(name="C_IN", value="1uF", package="0603", P1=VBUS_F, P2=GND)
+Capacitor(name="C_OUT", value="1uF", package="0603", P1=V3V3, P2=GND)
+Resistor(name="R_FB1", value="100kohm", package="0402", P1=V3V3, P2=LDO_FB)
+Resistor(name="R_FB2", value="20kohm", package="0402", P1=LDO_FB, P2=GND)
+
+# 電源の表示
+Resistor(name="R_LED", value="1kohm", package="0402", P1=V3V3, P2=LED_A)
+Led(name="D_LED", package="0603", color="green", A=LED_A, K=GND)
+
+# 外へ出す 3 ピン（3.3V・GND・5V）
+PinHeader(name="J_OUT", pins=3, P1=V3V3, P2=GND, P3=VBUS_F)
+
+Board(
+    name="probe_power",
+    path="eda",
+    layers=2,
+    schematic=True,
+)

@@ -68,7 +68,10 @@ def erc(sch, t):
     if not out.exists():
         return "実行できない", [], 1
     d = json.loads(out.read_text())
-    return check_list("ERC", [v for s in d.get("sheets", []) for v in s.get("violations", [])])
+    arr = [v for s in d.get("sheets", []) for v in s.get("violations", [])]
+    import kerc  # 古いビルドの JSON は位置が 100 分の 1（kerc が回路図と比べて直す）
+    kerc.fix_scale(arr, kerc.schematic_index(sch)[0])
+    return check_list("ERC", arr)
 
 
 def drc(pcb, t):

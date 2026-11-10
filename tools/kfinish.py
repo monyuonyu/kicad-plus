@@ -11,6 +11,7 @@
   kicad-local finish islands <入力> <出力>
       どこにもつながらないベタの島を取り除く（ゾーンの設定を「島は常に消す」にして塗り直す）
   kicad-local finish widen <入力> <出力> --net 名前 --current 2 [--rise 10] [--copper 35]
+  kicad-local finish widen <入力> <出力> --intent intent.json   （nets の current があるネットを全部。tools/kintent.py）
       流す電流（A）から IPC-2221 の式で必要な幅を出し、そのネットの細い配線を太くする
       （--rise 許す温度上昇 ℃、--copper 銅の厚さ µm。内層は外層の半分の電流で計算）
   kicad-local finish fill <入力> <出力>
@@ -24,6 +25,9 @@ import sys
 from pathlib import Path
 
 import pcbnew
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import kintent  # noqa: E402
 
 
 def iu(mm):
@@ -230,30 +234,42 @@ def cmd_islands(board, a):
     return {"ok": True, "zones": n}
 
 
-def ipc2221_width_mm(current, rise, copper_um, internal):
-    """IPC-2221: I = k·ΔT^0.44·A^0.725（A は断面積 mil²、k は外層 0.048・内層 0.024）"""
-    k = 0.024 if internal else 0.048
-    area = (current / (k * rise ** 0.44)) ** (1 / 0.725)       # mil²
-    thick_mil = copper_um / 25.4
-    return area / thick_mil * 0.0254                            # mm
-
-
-def cmd_widen(board, a):
+def widen_net(board, pattern, current, rise, copper):
     cu = list(board.GetEnabledLayers().CuStack())
     outer = {cu[0], cu[-1]}
     changed, need = 0, {}
     for t in board.GetTracks():
-        if isinstance(t, pcbnew.PCB_VIA) or not fnmatch.fnmatchcase(t.GetNetname(), a.net):
+        if isinstance(t, pcbnew.PCB_VIA) or not fnmatch.fnmatchcase(t.GetNetname(), pattern):
             continue
-        w = ipc2221_width_mm(a.current, a.rise, a.copper, t.GetLayer() not in outer)
+        w = kintent.ipc2221_width_mm(current, rise, copper, t.GetLayer() not in outer)
         need[board.GetLayerName(t.GetLayer())] = round(w, 3)
         if t.GetWidth() < iu(w):
             t.SetWidth(iu(math.ceil(w * 100) / 100))
             changed += 1
+    return changed, need
+
+
+def cmd_widen(board, a):
+    note = "太くした配線がほかの物に近づいていないか、DRC で確かめること"
+    if a.intent:
+        intent = kintent.load(a.intent)
+        names = [str(n) for n in board.GetNetsByName().keys() if str(n)]
+        nets, missing = [], []
+        for want, v in intent["nets"].items():
+            if v.get("current"):
+                hit = kintent.match_net(names, want)
+                (nets.append((hit, v["current"])) if hit else missing.append(want))
+        res = []
+        for net, cur in nets:
+            ch, need = widen_net(board, net, cur, a.rise, a.copper)
+            res.append({"net": net, "current_a": cur, "required_width_mm": need, "widened": ch})
+        fill(board)
+        return {"ok": True, "intent": a.intent, "rise_c": a.rise, "copper_um": a.copper, "nets": res,
+                "widened": sum(r["widened"] for r in res), "missing_nets": missing, "note": note}
+    changed, need = widen_net(board, a.net, a.current, a.rise, a.copper)
     fill(board)
     return {"ok": True, "net": a.net, "current_a": a.current, "rise_c": a.rise, "copper_um": a.copper,
-            "required_width_mm": need, "widened": changed,
-            "note": "太くした配線がほかの物に近づいていないか、DRC で確かめること"}
+            "required_width_mm": need, "widened": changed, "note": note}
 
 
 def main():
@@ -276,17 +292,24 @@ def main():
     ap.add_argument("--current", type=float)
     ap.add_argument("--rise", type=float, default=10.0)
     ap.add_argument("--copper", type=float, default=35.0)
+    ap.add_argument("--intent", help="widen: intent.json の nets の current があるネットを全部")
     a = ap.parse_args()
     src = Path(a.input)
     if not src.is_file():
         sys.stderr.write(f"基板がない: {src}\n")
         return 2
-    if a.what in ("zone", "stitch", "widen") and not a.net:
+    if a.what in ("zone", "stitch") and not a.net or a.what == "widen" and not (a.net or a.intent):
         sys.stderr.write(f"finish {a.what} には --net が要る\n")
         return 2
-    if a.what == "widen" and not a.current:
+    if a.what == "widen" and not a.intent and not a.current:
         sys.stderr.write("finish widen には --current（A）が要る\n")
         return 2
+    if a.intent:
+        try:
+            kintent.load(a.intent)
+        except kintent.IntentError as e:
+            sys.stderr.write(f"{e}\n")
+            return 2
     board = pcbnew.LoadBoard(str(src))
     res = {"outline": cmd_outline, "zone": cmd_zone, "stitch": cmd_stitch, "islands": cmd_islands,
            "widen": cmd_widen, "fill": lambda b, _: (fill(b), {"ok": True})[1]}[a.what](board, a)

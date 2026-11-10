@@ -55,6 +55,9 @@ kicad-local: 改良した KiCad の道具をまとめた入口(保存形式は�
                                                 部品表の値の列を回路図に合わせる(変わるセルだけ。書式はそのまま)
   kicad-local models <基板> [--json]           3D モデルの無い(ファイルが無い・指定が無い)部品の一覧。あれば終了コード 1
   kicad-local stats <基板> [--json]             基板の統計(部品・パッド・穴径・面積など。配線・外形が無いときはそう言う)
+  kicad-local ingest <回路図> <基板> --out <出力.kicad_pcb> [--intent intent.json] [--json]
+                                               別の道具（Zener など）の回路図と基板をそろえる(PWR_FLAG・未接続の印・ネット名・
+                                               ネットクラス・配置の約束・重複・フットプリント・3D・ERC/DRC)
   kicad-local doctor [--json]                  この環境で使える命令の一覧(改良版のビルドが無ければ本家の KiCad で
                                                 動く範囲に自動で切り替わる。足りない物と入れ方も)
   kicad-local route <入力> <出力|-> <手順|-> [--instructions 指示書.md]
@@ -156,6 +159,7 @@ case "$cmd" in
   netlist) exec kicad-python "$KICAD_LOCAL_HOME/tools/knetlist.py" "$@" ;;
   bom) exec kicad-python "$KICAD_LOCAL_HOME/tools/kbom.py" "$@" ;;
   models) exec kicad-python "$KICAD_LOCAL_HOME/tools/k3d.py" check "$@" ;;
+  ingest) exec kicad-python "$KICAD_LOCAL_HOME/tools/kingest.py" "$@" ;;
   stats) exec python3 "$KICAD_LOCAL_HOME/tools/kstats.py" "$@" ;;
   doctor) exec python3 "$KICAD_LOCAL_HOME/tools/kdoctor.py" "$@" ;;
   gerber) exec kicad-gerber "$@" ;;

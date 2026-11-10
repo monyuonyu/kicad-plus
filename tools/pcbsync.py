@@ -264,8 +264,29 @@ def main():
             if knetlist.unescape(t.GetNetname()) in nets:
                 b.Remove(t)
         say(f"  {ref} のネット {', '.join(sorted(nets))} の配線を消した(GND はベタなので残す)")
+    # 名前だけが変わったネット（端子の組が同じ。生成元の NC_J_USB_SBU1 → 回路図の unconnected-(J_USB-SBU1-PadA8)
+    # など）は、配線・ビア・ベタを新しい名前に移す（消して引き直す必要はない）
+    renamed = {}
+    for o, pins in before.items():
+        if o in after:
+            continue
+        cand = [n for n, ps in after.items() if ps == pins and n not in before]
+        if len(cand) == 1:
+            renamed[o] = cand[0]
+    if renamed:
+        for t in list(b.GetTracks()):
+            n = knetlist.unescape(t.GetNetname())
+            if n in renamed:
+                t.SetNet(netinfo(renamed[n]))
+        for z in b.Zones():
+            n = knetlist.unescape(z.GetNetname())
+            if n in renamed:
+                z.SetNet(netinfo(renamed[n]))
+        for o, n in sorted(renamed.items()):
+            say(f"  ネット名 {o} → {n}（つながりは同じ。配線は残した）")
+    rep["renamed_nets"] = [{"old": o, "new": n} for o, n in sorted(renamed.items())]
     redo = []
-    for net in set(before) | set(after):
+    for net in (set(before) | set(after)) - set(renamed) - set(renamed.values()):
         old = before.get(net, set())
         new = {x for x in after.get(net, set()) if x.split(".")[0] not in newrefs}
         if old != new or (after.get(net, set()) - old):

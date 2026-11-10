@@ -23,6 +23,7 @@ kicad-local sch: 画面なしで回路図を直す(ローカル道具、2026-09-
   add "#FLG03" PWR_FLAG power:PWR_FLAG at 20.32,30.48 1=+24V
                                            電源記号(部品番号が # で始まる)は部品表に入れない
   label +3V3 at A1.17                      端子に短い線とラベルを付ける
+  noconnect J1.A6,J1.B6                    使わない端子に未接続の印(×)を付ける(線やラベルがある端子は飛ばす)
   text "注記の文" at 45.72,198.12          注記
   title rev="B" date=2026-09-25            表題欄(title / date / rev / company)
 
@@ -536,6 +537,22 @@ class Sch:
         self.log.append(f"{pin} に短い線とラベル {name} を付ける")
         print(f"label {name} at {pin}")
 
+    def cmd_noconnect(self, a):
+        """noconnect J1.A6,J1.B6: 使わない端子に「未接続」の印（× の印）を付ける。線やラベルがある端子は飛ばす"""
+        done = []
+        have = {(r3(n[1][1]), r3(n[1][2])) for n in sx.find(self.root, "no_connect") if sx.one(n, "at")}
+        for pin in a[0].split(","):
+            pos, _, _ = self.pinpos(pin)
+            if self.wires_at(pos) or pos in have:
+                print(f"noconnect {pin}: 線か印がもうあるので飛ばした")
+                continue
+            self.root.append(["no_connect", ["at", num(pos[0]), num(pos[1])], ["uuid", U()]])
+            have.add(pos)
+            done.append(pin)
+        if done:
+            self.log.append("、".join(done) + " に未接続の印（×）を付ける")
+            print(f"noconnect {', '.join(done)}")
+
     def cmd_text(self, a):
         x, y = (float(v) for v in a[2].split(","))
         self.root.append(["text", Q(a[0]), ["exclude_from_sim", "no"], ["at", num(x), num(y), "0"],
@@ -580,6 +597,7 @@ def main():
     ap.add_argument("output")
     ap.add_argument("steps")
     ap.add_argument("--instructions", help="画面で同じ操作をするための指示書(Markdown)")
+    ap.add_argument("--no-check", action="store_true", help="保存後の接続・部品表の差と ERC を省く(ほかの道具から続けて呼ぶとき)")
     a = ap.parse_args()
 
     sch = Sch(a.input)
@@ -592,7 +610,7 @@ def main():
         t = shlex.split(line)
         f = getattr(sch, f"cmd_{t[0]}", None)
         if not f:
-            raise SystemExit(f"{ln} 行目: 命令 {t[0]} が無い(info/set/rename/symbol/delete/insert/add/label/text/title)")
+            raise SystemExit(f"{ln} 行目: 命令 {t[0]} が無い(info/set/rename/symbol/delete/insert/add/label/noconnect/text/title)")
         try:
             f(t[1:])
         except (IndexError, ValueError) as e:
@@ -607,6 +625,9 @@ def main():
         return 0
     sch.finish()
     sch.save(out)
+    if a.no_check:
+        print(f"→ {out}")
+        return 0
 
     # 確かめる: 接続・部品表の差と ERC
     import review

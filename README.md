@@ -41,6 +41,9 @@ kicad-local why 基板.kicad_pcb             # for each unrouted pair, "why it c
 kicad-local view 基板.kicad_pcb --drc --net GND   # annotated 2D image (highlighted nets, numbered DRC violations)
 kicad-local autoroute 入力.kicad_pcb 出力.kicad_pcb   # autoroute the whole board with Freerouting, then refill zones and run DRC
 kicad-local finish outline|zone|stitch|islands|widen 入力 出力 ...   # board outline, zones, stitching vias, island removal, widening tracks from current
+kicad-local finish widen 入力 出力 --intent intent.json   # widen every net that has a current in intent.json
+kicad-local ingest 回路図 基板 --out 出力.kicad_pcb --intent intent.json [--place]   # bring in a board made by another tool (Zener etc.): PWR_FLAG, no-connect marks, net names matched to the schematic, netclasses, placement rules, checks (docs/ingest.md)
+kicad-local doctor                        # which commands work here (falls back to the stock KiCad when there is no build)
 
 # Move parts and route (steps can also come from stdin)
 kicad-local route 基板.kicad_pcb 出力.kicad_pcb - --instructions 手順.md <<'EOF'
@@ -59,7 +62,7 @@ kicad-local review 新しい版 前の版 --out 確認/        # ERC, DRC, 3D, d
 ```
 
 With `--instructions`, it also writes a step-by-step guide that lets a person reproduce the same operations in the KiCad GUI.
-**Using it from AI or scripts**: drc, erc, why, view, stats, autoroute and finish output machine-readable results with `--json`, and drc, erc and why return
+**Using it from AI or scripts**: drc, erc, why, view, stats, autoroute, finish and ingest output machine-readable results with `--json`, and drc, erc and why return
 exit code 1 when something needs checking (so the next decision can be made from the result without parsing text). The 10.0.6 version runs without a display (DISPLAY).
 For details see [docs/guide.md](docs/guide.md), for the tools [tools/README.md](tools/README.md), and for circuit simulation [tools/ksim/README.md](tools/ksim/README.md).
 
@@ -185,7 +188,8 @@ and also checks each tool individually.
 | `patches/10.0.6/` | Changes for KiCad 10.0.6 (numbered patches; upstream MRs carry the author's name) |
 | `patches/8.0.9/` | Changes for KiCad 8.0.9. `ALL-combined.patch` combines them all; the numbered patches are a historical record |
 | `bin/` | Entry points (`kicad-local`, `kicad-route`, `kicad-gerber`, `kicad-cli-local`, `kicad-python`) and GUI launchers (`pcbnew-ja`, `eeschema-ja`, `kicad-ja`) |
-| `tools/` | Python tools (review, lint, sch, sim, pcbsync, silkfix, etc.) |
+| `tools/` | Python tools (review, lint, sch, sim, pcbsync, silkfix, ingest, etc.) |
+| `adapters/` | Bridges from other board generators to `kicad-local ingest` (`zener.py`: Zener .zen) |
 | `test/` | Regression tests |
 | `package/` | Scripts that build the distribution (`linux.sh`: makes a tar.gz from the build directory; `check-linux.sh`: checks an extracted package) |
 | `installer/` | Windows installer (NSIS) |

@@ -40,7 +40,7 @@ is_elf() { [ "$(head -c4 "$1" 2>/dev/null | tr -d '\0')" = $'\x7fELF' ]; }
 
 # ---- リポジトリの側（試験の出力と Python のキャッシュは除く）
 tar -C "$here" --exclude=__pycache__ --exclude=test/now -cf - \
-  bin tools test patches package README.md README.ja.md README.zh-CN.md LICENSE | tar -C "$dst" -xf -
+  bin tools adapters docs test patches package README.md README.ja.md README.zh-CN.md LICENSE | tar -C "$dst" -xf -
 
 # ---- ビルドの側
 copy() {  # ビルドの場所からの相対パスを、同じ配置で写す（ライブラリは実体とリンクの両方）

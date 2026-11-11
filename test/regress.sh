@@ -154,6 +154,9 @@ chk "kicad-cli の引数の誤りを最後にもう一度(標準エラー、終�
 # ksim のモデルの出どころ: 値の対応で別の品物(P6KE39A を 6.8V 品)・値が記号の名前・状態を決めていないスイッチは未確認
 chk "ksim: モデルの出どころと未確認(黙って代用しない)" "python3 tests/ksim_provenance_test.py $KICAD_LOCAL_HOME/tools/ksim | grep -q ok"
 
+# ここから下の試験の材料（ingest/・zener/）は KiCad 10 の形式で保存してある。KiCad 8 の版では開けないので飛ばす
+kmajor=$(kicad-cli-plus version 2>/dev/null | tail -1 | cut -d. -f1)
+if [ "${kmajor:-0}" -ge 10 ] 2>/dev/null; then
 # 別の道具の基板の取り込み（Zener 風: 部品番号 J1 に欄 Path=J_USB、未使用の端子のネットが NC_J_USB_…、ネット名に / が無い、
 # PWR_FLAG が無い）。取り込んだ直後に power_pin_not_driven 0・net_conflict 0、VBUS の配線は残り、J_USB は縁の約束を守れていない
 chk "kicad-plus ingest(PWR_FLAG・ネット名・未接続の印。power_pin_not_driven 0・net_conflict 0、配線は残る)" "rm -rf now/ingest; kicad-plus ingest ingest/probe.kicad_sch ingest/probe.kicad_pcb --out now/ingest/probe.kicad_pcb --intent ingest/intent.json --json > now/ingest.json; python3 -c \"import json; d=json.load(open('now/ingest.json')); c=d['counts']; assert c['power_pin_not_driven']==0 and c['net_conflict']==0, c; assert len(d['pwr_flag']['added'])==2 and len(d['no_connect']['added'])==7, (d['pwr_flag'], d['no_connect']); assert {'old':'VBUS','new':'/VBUS'} in d['sync']['renamed_nets'] and d['sync']['tracks_removed']==0; assert not [v for v in d['erc']['violations'] if v['type'] in ('pin_not_connected','power_pin_not_driven')]; p=[x for x in d['placement'] if x['rule']['ref']=='J_USB'][0]; assert p['ref']=='J1' and not p['ok'], p\" && grep -q '(segment' now/ingest/probe.kicad_pcb"
@@ -168,6 +171,9 @@ chk "Zener: ingest で power_pin_not_driven 0・net_conflict 0、誤報なし(�
 chk "Zener: --place で USB-C の口(PCB Edge の印)を縁にぴったり・C_IN を U_LDO の近くへ(要確認なし)。left なら 270° 回す" "python3 $KICAD_LOCAL_HOME/adapters/zener.py zener/probe_power.zen --pcb zener/probe_power.kicad_pcb --sch zener/probe_power.kicad_sch --intent zener/intent.json --out now/zener/any.kicad_pcb --outline 2 --place --json > now/zener_any.json; sed 's/\"edge\": \"any\"/\"edge\": \"left\"/' zener/intent.json > now/zener_left.json; python3 $KICAD_LOCAL_HOME/adapters/zener.py zener/probe_power.zen --pcb zener/probe_power.kicad_pcb --sch zener/probe_power.kicad_sch --intent now/zener_left.json --out now/zener/left.kicad_pcb --outline 2 --place --json > now/zener_left_r.json; python3 -c \"import json; a=json.load(open('now/zener_any.json')); b=json.load(open('now/zener_left_r.json')); pa=[x for x in a['placement'] if x['rule']['ref']=='J_USB'][0]; pb=[x for x in b['placement'] if x['rule']['ref']=='J_USB'][0]; assert pa['ok'] and pa['facing']=='bottom' and abs(pa['edge_gap_mm'])<0.01, pa; assert a['ok'], a['checks']; assert [x for x in a['placement'] if x['rule']['ref']=='C_IN' and x['ok']], a['placement']; assert pb['ok'] and pb['facing']=='left' and [x for x in b['placed'] if x['rotated']==270], (pb, b['placed'])\""
 chk "Zener: lint は NC_ のネットをつなぎ忘れと言わない、記号の種類を推す" "kicad-plus lint zener/probe_power.kicad_sch > now/zener_lint.txt; ! grep -q 'NC_J_USB' now/zener_lint.txt && grep -q 'TLV75801PDRV → LDO' now/zener_lint.txt"
 chk "kicad-plus models: 埋め込みの 3D モデル(kicad-embed://)を見つかった扱い" "kicad-plus models zener/probe_power.kicad_pcb | grep -q 'すべて見つかった'"
+else
+  echo "  --  ingest・Zener・erc のネット名・drc のライブラリ由来: 材料が KiCad 10 の形式なので飛ばした（この版は ${kmajor:-?}）"
+fi
 
 # 終了コード: 配線の比較か道具の確認に NG が 1 つでもあれば 1（自動の試験が失敗を見逃さないように）
 if [ "$route_rc" -ne 0 ] || [ "$fails" -ne 0 ]; then

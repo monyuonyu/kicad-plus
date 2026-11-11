@@ -164,6 +164,7 @@ chk "kicad-plus ingest --place(J_USB を向きそのまま縁へ。ルーター�
 chk "kicad-plus lint: 標準のライブラリに無い記号(Zener 風)でも種類を推して点検(出力のコンデンサ抜け)" "kicad-plus lint ingest/zen_lint.kicad_sch | grep -q 'VOUT 端子(/V3V3)に GND へのコンデンサが無い'"
 chk "kicad-plus erc: 項目にネット名(電源記号は値、ラベルは名前)" "kicad-plus erc ingest/probe.kicad_sch --json > now/erc_nets.json; python3 -c \"import json; d=json.load(open('now/erc_nets.json')); n=sum([v['nets'] for v in d['violations'] if v['type']=='power_pin_not_driven'],[]); assert '/VBUS' in n and '/GND' in n, d['violations']\""
 chk "kicad-plus drc: 部品のライブラリ由来(USB4105 の穴と GND のパッド)を分ける" "kicad-plus drc ingest/usbc.kicad_pcb --json > now/drc_lib.json; python3 -c \"import json; d=json.load(open('now/drc_lib.json')); assert not [v for v in d['violations'] if v['type']=='hole_clearance'] and len([v for v in d['from_footprint_library'] if v['type']=='hole_clearance' and v['footprint']=='J_USB'])==4, d['from_footprint_library']\""
+chk "kicad-plus drc: 日本語の環境でも(配布版は KiCad の説明が日本語になる)ライブラリ由来を分ける" "LANG=ja_JP.UTF-8 LC_ALL=ja_JP.UTF-8 kicad-plus drc ingest/usbc.kicad_pcb --json > now/drc_lib_ja.json; python3 -c \"import json; d=json.load(open('now/drc_lib_ja.json')); assert not [v for v in d['violations'] if v['type']=='hole_clearance'] and len([v for v in d['from_footprint_library'] if v['type']=='hole_clearance' and v['footprint']=='J_USB'])==4, d['from_footprint_library']\""
 
 # 本物の Zener（pcbc 0.4.100）の書き出しそのまま（zener/: probe_power.zen から pcb apply。外形が無いので --outline で作る）。
 # 記号はライブラリ名なし（R_Small）、欄 Path は C_IN.C 形、フットプリントは自前の表、3D モデルは埋め込み

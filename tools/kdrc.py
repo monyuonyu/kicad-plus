@@ -198,12 +198,38 @@ def narrow_tracks(board, pro_path):
     return issues, None
 
 
+UUID_OWNER = {}   # 基板の中の部品の要素（パッド・図形）の uuid → (部品番号, ネット名)。split_library の前に load_owners で
+
+
+def load_owners(board):
+    UUID_OWNER.clear()
+    for fp in sx.find(board, "footprint"):
+        rp = sx.prop(fp, "Reference")
+        ref = str(rp[2]) if rp is not None and len(rp) > 2 else None
+        if ref is None:
+            continue
+        for e in fp:
+            if not isinstance(e, list) or not e:
+                continue
+            u = sx.one(e, "uuid") or sx.one(e, "tstamp")
+            if u is not None and len(u) > 1:
+                UUID_OWNER[str(u[1])] = (ref, net_of(e) if e[0] == "pad" else "")
+
+
 def footprint_of(v):
-    """違反の項目が全部 1 つの部品のもの（"Pad A1 [GND] of J_USB on F.Cu"、"NPTH pad of J_USB"）ならその参照"""
+    """違反の項目が全部 1 つの部品のもの（USB-C の受け口のパッドと取り付け穴など）ならその部品番号。
+    項目の uuid を基板の部品の要素に引き当てる（説明文は KiCad の言語で変わるので読まない。引き当てられない
+    ときだけ英語の説明 "Pad A1 [GND] of J_USB on F.Cu" を見る）"""
     if v.get("type") not in FOOTPRINT_TYPES:
         return None
     refs, nets = set(), set()
     for i in v.get("items", []):
+        own = UUID_OWNER.get(i.get("uuid", ""))
+        if own:
+            refs.add(own[0])
+            if own[1]:
+                nets.add(own[1])
+            continue
         desc = i.get("description", "")
         m = OF_REF.search(desc)
         if not m:
@@ -307,6 +333,9 @@ def main():
         load_net_names(tree)
         narrow, note = narrow_tracks(tree, board.with_suffix(".kicad_pro"))
         strict = netless_pads(tree, schematic_pins(board)) + narrow + stale_zones(board, d)
+    tree = sx.parse(board.read_text(encoding="utf-8"))
+    load_net_names(tree)
+    load_owners(tree)
     lib = split_library(d)  # stale_zones は分ける前の全部で比べる
 
     bad = [v for v in d.get("violations", []) if v["type"] not in NOISE]

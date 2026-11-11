@@ -3,7 +3,7 @@
 kicad-plus ingest: 別の道具（Zener・tscircuit・SKiDL など）が作った回路図と基板を、KiCad で仕上げられる形に
 そろえる（画面なし。kicad-python で動かす。入力は変えない）
 
-  kicad-plus ingest <回路図.kicad_sch> <基板.kicad_pcb> --out <出力.kicad_pcb> [--intent intent.json] [--place] [--json]
+  kicad-plus ingest <回路図.kicad_sch> <基板.kicad_pcb> --out <出力.kicad_pcb> [--intent intent.json] [--outline 余白mm] [--place] [--json]
 
 出力の基板の隣に、同じ名前の回路図（.kicad_sch。下の階層のシートも）とプロジェクト（.kicad_pro）を置く。
 やること:
@@ -633,6 +633,8 @@ def main():
     ap.add_argument("--intent")
     ap.add_argument("--no-pwr-flag", action="store_true", help="PWR_FLAG を付けない")
     ap.add_argument("--no-nc", action="store_true", help="未接続の印を付けない")
+    ap.add_argument("--outline", type=float, metavar="余白mm",
+                    help="外形（Edge.Cuts）が無ければ、部品を囲む長方形を作る（kicad-plus finish outline。Zener の基板は外形が無い）")
     ap.add_argument("--place", action="store_true",
                     help="配置の約束（placement）を守れていない部品を動かす（findspace・place に改良版のビルドが要る）")
     ap.add_argument("--json", action="store_true")
@@ -689,6 +691,21 @@ def main():
     say(f"  ネット名をそろえた: {len(sync.get('renamed_nets') or [])} 本、端子のネットを直した: {len(sync.get('pad_nets') or [])} 個、"
         f"部品を足した: {len(sync.get('added') or [])} 個、消した配線: {sync.get('tracks_removed', 0)} 本")
 
+    if a.outline is not None:
+        tb = load_board(out)
+        if tb.GetBoardEdgesBoundingBox().GetWidth() <= 0 or not any(
+                d.GetLayer() == pcbnew.Edge_Cuts for d in tb.GetDrawings()):
+            r = subprocess.run([KL, "finish", "outline", str(out), str(out), "--margin", str(a.outline), "--json"],
+                               capture_output=True, text=True)
+            try:
+                o = json.loads(r.stdout)
+                rep["outline"] = {"made": True, "outline_mm": o.get("outline_mm"), "size_mm": o.get("size_mm")}
+                say(f"  外形を作った: {o.get('size_mm')} mm（余白 {a.outline} mm）")
+            except ValueError:
+                rep["outline"] = {"made": False, "error": (r.stdout + r.stderr)[-300:]}
+                say("  ! 外形を作れなかった")
+        else:
+            rep["outline"] = {"made": False, "why": "外形がもうある"}
     b = load_board(out)
     if intent:
         names = [knetlist.unescape(str(n)) for n in b.GetNetsByName().keys() if str(n)]

@@ -3,7 +3,7 @@
 adapters/zener.py: Zener（diodeinc/pcb の .zen）で作った基板を kicad-plus ingest にかける
 
   python3 adapters/zener.py <board.zen> --out <出力.kicad_pcb> [--intent 追加.json] [--layout 置き場]
-                            [--pcb 基板.kicad_pcb] [--sch 回路図.kicad_sch] [--place] [--print-intent] [--json]
+                            [--pcb 基板.kicad_pcb] [--sch 回路図.kicad_sch] [--outline 余白mm] [--place] [--print-intent] [--json]
 
   1. .zen から設計の意図を読む: Power("VBUS", voltage="4.75V to 5.5V") → nets.VBUS {role: power, voltage: 5.5}、
      Ground("GND") → {role: ground}。--intent のファイル（電流・ネットクラス・配置の約束）を上に重ねる
@@ -103,6 +103,7 @@ def main():
     ap.add_argument("--layout", help="Zener の書き出しの置き場（既定は Board(path=…)）")
     ap.add_argument("--pcb")
     ap.add_argument("--sch")
+    ap.add_argument("--outline", type=float, metavar="余白mm", help="外形が無ければ作る（Zener の基板は外形が無い。ingest --outline）")
     ap.add_argument("--place", action="store_true", help="縁の約束を守れていない部品を縁へ動かす（ingest --place）")
     ap.add_argument("--print-intent", action="store_true")
     ap.add_argument("--json", action="store_true")
@@ -133,7 +134,7 @@ def main():
             return 2
     f = Path(tempfile.mkdtemp(prefix="zener-intent-")) / "intent.json"
     f.write_text(json.dumps(intent, ensure_ascii=False, indent=1), encoding="utf-8")
-    cmd = [KL, "ingest", str(sch), str(pcb), "--out", a.out, "--intent", str(f)] + (["--json"] if a.json else []) + (["--place"] if a.place else [])
+    cmd = [KL, "ingest", str(sch), str(pcb), "--out", a.out, "--intent", str(f)] + (["--json"] if a.json else []) + (["--place"] if a.place else []) + (["--outline", str(a.outline)] if a.outline is not None else [])
     if not a.json:
         print(f"Zener: {Path(a.zen).name} → 回路図 {sch}、基板 {pcb}（意図: ネット {len(intent['nets'])} 本"
               + (f"、配置の約束 {len(intent.get('placement', []))} 件" if intent.get("placement") else "") + "）",

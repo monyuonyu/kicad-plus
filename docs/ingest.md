@@ -52,7 +52,7 @@ kicad-plus ingest probe.kicad_sch probe.kicad_pcb --out ingest/probe.kicad_pcb -
 ## Zener から
 
 ```
-python3 adapters/zener.py board.zen --out ingest/board.kicad_pcb --intent 追加.json [--place]
+python3 adapters/zener.py board.zen --out ingest/board.kicad_pcb --intent 追加.json [--outline 2] [--place]
 ```
 
 .zen の `Power("VBUS", voltage="4.75V to 5.5V")`・`Ground("GND")` から nets の role と voltage を作り、
@@ -73,7 +73,7 @@ python3 adapters/zener.py board.zen --out ingest/board.kicad_pcb --intent 追加
   - fp-lib-table は `${KIPRJMOD}/../.pcb/stdlib/…` → 写すときに元の場所の絶対パスに書き換える
   - 3D モデルは基板に埋め込み（`kicad-embed://`）→ models は見つかった扱い
   - 外から来る電源の power_pin_not_driven、ネット名の違いの net_conflict → PWR_FLAG とネット名の書き換えで 0
-  - 外形（Edge.Cuts）が無い → `kicad-plus finish outline` で足してから `--place`
+  - 外形（Edge.Cuts）が無い → `--outline 余白mm` で部品を囲む長方形を作ってから配置を確かめる
 - 縁の約束: KiCad のコネクタの多く（Connector_USB の 75 個のうち 30 個など）は口の側に「PCB Edge」の線がある。
   あれば、口がその辺を向くよう回し（`edge: any` なら今の口の向きの辺）、線を縁にぴったり重ねる。無い部品は外形枠を縁から
   `max_mm` 以内の空きへ（findspace）

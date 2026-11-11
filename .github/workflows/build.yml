@@ -48,6 +48,14 @@ jobs:
           sudo apt-get install -y $(cat ${{ matrix.deps }}) kicad ccache \
             python3-numpy python3-matplotlib python3-pil poppler-utils fonts-ipaexfont-gothic xvfb patchelf \
             imagemagick x11-utils locales
+          # PPA に届かないと apt は Ubuntu 標準の古い KiCad（noble は 7.0）を黙って入れる（2026-11-11、試験が 10 件
+          # 古いライブラリで落ちた）。比べる相手が違う版では試験も配布物の確かめも意味が無いので、ここで止める
+          got=$(dpkg-query -W -f='${Version}' kicad)
+          want=${{ matrix.version }}; want=${want%%.*}
+          case "$got" in
+            "$want".*) echo "システムの KiCad: $got" ;;
+            *) echo "::error::システムの KiCad が $got（PPA の ${want}.x が入らなかった。Launchpad に届かない？）"; exit 1 ;;
+          esac
           # 画面の確かめを日本語で
           sudo locale-gen ja_JP.UTF-8
 

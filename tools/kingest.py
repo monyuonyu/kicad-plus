@@ -90,6 +90,9 @@ def sheet_files(sch):
     return out
 
 
+PRO_NOTE = []
+
+
 def copy_project(sch, pcb, out):
     """出力の隣に回路図（とシート）・プロジェクト・ライブラリ表を写す。返り値: 出力の回路図"""
     sch, pcb, out = Path(sch).resolve(), Path(pcb).resolve(), Path(out).resolve()
@@ -117,6 +120,8 @@ def copy_project(sch, pcb, out):
         if cand.is_file() and cand.resolve() != pro:
             shutil.copyfile(cand, pro)
             break
+    if cand == TEMPLATE_PRO:
+        PRO_NOTE.append("プロジェクト（.kicad_pro）が無いので KiCad の雛形から作った（ネットクラス・題名欄の変数などは元に無い）")
     return dst_sch
 
 
@@ -458,73 +463,122 @@ def place_by_marker(out, b, f, row):
     return rec
 
 
-def place_on_edges(out, b, rows):
-    """縁の約束を守れていない部品を、向きはそのまま、縁に沿った帯の中の空いた所へ（kicad-route の findspace と
-    place。改良版のビルドが要る）。返り値: [{"ref", "from", "to", "ok", "why"}]"""
+def route_place(route, out, ref, x, y, ang):
+    """kicad-route の place で動かす。（動いたか, だめな理由）"""
+    tmp = out.with_name(out.stem + ".ingest-tmp.kicad_pcb")
+    q = subprocess.run([route, str(out), str(tmp), "-"], input=f"place {ref} {x:.3f},{y:.3f} {ang}\n",
+                       capture_output=True, text=True, timeout=600)
+    moved = tmp.exists() and re.search(r"成功 1 / 失敗 0", q.stdout)
+    why = None
+    if moved:
+        os.replace(tmp, out)
+    else:
+        ng = [ln.strip() for ln in q.stdout.splitlines() if " NG " in ln]
+        why = "place が失敗した: " + (ng[0] if ng else (q.stdout + q.stderr)[-300:])
+        if tmp.exists():
+            tmp.unlink()
+    for extra in (tmp.with_suffix(".kicad_pro"), tmp.with_suffix(".kicad_prl")):
+        if extra.exists():
+            extra.unlink()
+    return bool(moved), why
+
+
+def route_findspace(route, out, ref, box):
+    """kicad-route の findspace。[(x, y, 角度)]（配線の短い順）と、ルーターが動いたか"""
+    q = subprocess.run([route, str(out), "-", "-"],
+                       input=f"findspace {ref} 0.25 " + ",".join(f"{v:.3f}" for v in box) + "\n",
+                       capture_output=True, text=True, timeout=600)
+    return ([(float(x), float(y), round(float(a)) % 360) for rf, x, y, a in PLACE.findall(q.stdout) if rf == ref],
+            "置き場所" in q.stdout)
+
+
+def place_parts(out, b, rows):
+    """配置の約束を守れていない部品を動かす（返り値: [{"ref", "rule", "from", "to", "ok", "why"}]）
+    - 縁（PCB Edge の印あり）: 口をその辺へ向け、線を縁に重ねる（pcbnew で。先に全部やる）
+    - 縁（印なし）: 向きはそのまま、縁に沿った細い帯から空きを探す（kicad-route の findspace と place）
+    - near・target: 相手（か決まった点）から max_mm の四角の中の空きで、相手からの距離が max_mm 以内の所
+    findspace・place は改良版のビルドが要る"""
     route = shutil.which("kicad-route") or str(HERE.parent / "bin" / "kicad-route")
     eb = b.GetBoardEdgesBoundingBox()
     E = (pcbnew.ToMM(eb.GetLeft()), pcbnew.ToMM(eb.GetTop()), pcbnew.ToMM(eb.GetRight()), pcbnew.ToMM(eb.GetBottom()))
     fps = {f.GetReference(): f for f in b.GetFootprints()}
+    paths = {r: field(f, "Path") for r, f in fps.items()}
+    todo = [row for row in rows if not row["ok"] and row["ref"] is not None]
     done = []
-    for row in rows:
+    # 1. 口のある部品（基板をメモリで直して保存する。kicad-route がファイルを書き換える前に）
+    for row in [x for x in todo if x.get("edge_marker")]:
+        rec = place_by_marker(out, b, fps[row["ref"]], row)
+        rec["rule"] = row["rule"]
+        done.append(rec)
+    # 2. findspace で
+    for row in [x for x in todo if not x.get("edge_marker")]:
         r, ref = row["rule"], row["ref"]
-        if row["ok"] or "edge" not in r or ref is None or "edge_side" not in row:
-            continue
         f = fps[ref]
-        if row.get("edge_marker"):
-            done.append(place_by_marker(out, b, f, row))
-            continue
-        x0, y0, x1, y1 = fp_box(f)
         cx, cy = pcbnew.ToMM(f.GetPosition().x), pcbnew.ToMM(f.GetPosition().y)
         ang = round(f.GetOrientationDegrees()) % 360
-        lim = float(r.get("max_mm", 1.5))
-        side = r["edge"] if r["edge"] != "any" else row["edge_side"]
-        l, t, rr, bt = cx - x0, cy - y0, x1 - cx, y1 - cy
-        inset = 0.3   # findspace は外形枠を基板の縁から 0.3 mm 内側に収める
-
-        def band_of(w):
-            """中心の帯（部品の外形が縁から inset〜inset+w mm に入る範囲）"""
-            return {"left": (E[0] + l + inset, E[1] + t, E[0] + l + inset + w, E[3] - bt),
-                    "right": (E[2] - rr - inset - w, E[1] + t, E[2] - rr - inset, E[3] - bt),
-                    "top": (E[0] + l, E[1] + t + inset, E[2] - rr, E[1] + t + inset + w),
-                    "bottom": (E[0] + l, E[3] - bt - inset - w, E[2] - rr, E[3] - bt - inset)}[side]
-
-        rec = {"ref": ref, "edge": side, "from": [round(cx, 2), round(cy, 2)]}
-        best, ran = None, False
-        # 縁に近い細い帯から探し、無ければ広げる（findspace は 8 か所しか出さず、近い候補はまとめるので）
-        for w in sorted({0.25, 0.5, max(lim - inset, 0.25)}):
-            if w > max(lim - inset, 0.25):
+        rec = {"ref": ref, "rule": r, "from": [round(cx, 2), round(cy, 2)]}
+        if "edge" in r:
+            if "edge_side" not in row:
                 continue
-            band = band_of(w)
-            q = subprocess.run([route, str(out), "-", "-"],
-                               input=f"findspace {ref} 0.25 " + ",".join(f"{v:.3f}" for v in band) + "\n",
-                               capture_output=True, text=True, timeout=600)
-            ran = ran or "置き場所" in q.stdout
-            same = [(float(x), float(y), round(float(a)) % 360) for rf, x, y, a in PLACE.findall(q.stdout)
-                    if rf == ref and round(float(a)) % 360 == ang]
-            if same:
-                best = same[0]   # 帯の中では配線の短い順
-                break
-        if best is None:
-            rec.update(ok=False, why="縁に沿った帯に、今の向きのまま置ける空きが無い" if ran
-                       else "kicad-route を動かせない（改良版のビルドが要る。kicad-plus doctor）")
-            done.append(rec)
-            continue
-        tmp = out.with_name(out.stem + ".ingest-tmp.kicad_pcb")
-        q = subprocess.run([route, str(out), str(tmp), "-"], input=f"place {ref} {best[0]:.3f},{best[1]:.3f} {best[2]}\n",
-                           capture_output=True, text=True, timeout=600)
-        moved = tmp.exists() and re.search(r"成功 1 / 失敗 0", q.stdout)
-        if not moved:
-            ng = [ln.strip() for ln in q.stdout.splitlines() if " NG " in ln]
-            rec.update(ok=False, why="place が失敗した: " + (ng[0] if ng else (q.stdout + q.stderr)[-300:]))
-            if tmp.exists():
-                tmp.unlink()
+            rec["edge"] = row["edge_side"]
+            x0, y0, x1, y1 = fp_box(f)
+            lim = float(r.get("max_mm", 1.5))
+            side = r["edge"] if r["edge"] != "any" else row["edge_side"]
+            l, t, rr, bt = cx - x0, cy - y0, x1 - cx, y1 - cy
+            inset = 0.3   # findspace は外形枠を基板の縁から 0.3 mm 内側に収める
+
+            def band_of(w):
+                return {"left": (E[0] + l + inset, E[1] + t, E[0] + l + inset + w, E[3] - bt),
+                        "right": (E[2] - rr - inset - w, E[1] + t, E[2] - rr - inset, E[3] - bt),
+                        "top": (E[0] + l, E[1] + t + inset, E[2] - rr, E[1] + t + inset + w),
+                        "bottom": (E[0] + l, E[3] - bt - inset - w, E[2] - rr, E[3] - bt - inset)}[side]
+            best, ran = None, False
+            # 縁に近い細い帯から探し、無ければ広げる（findspace は 8 か所しか出さず、近い候補はまとめるので）
+            for w in sorted({0.25, 0.5, max(lim - inset, 0.25)}):
+                if w > max(lim - inset, 0.25):
+                    continue
+                cands, r_ok = route_findspace(route, out, ref, band_of(w))
+                ran = ran or r_ok
+                same = [c for c in cands if c[2] == ang]
+                if same:
+                    best = same[0]
+                    break
+            if best is None:
+                rec.update(ok=False, why="縁に沿った帯に、今の向きのまま置ける空きが無い" if ran
+                           else "kicad-route を動かせない（改良版のビルドが要る。kicad-plus doctor）")
+                done.append(rec)
+                continue
+        elif "near" in r or "target" in r:
+            if "near" in r:
+                other = kintent.resolve_ref(r["near"], fps, paths)
+                if other is None:
+                    continue
+                o = fps[other].GetPosition()
+                tx, ty = pcbnew.ToMM(o.x), pcbnew.ToMM(o.y)
+                lim = float(r.get("max_mm", 5))
+            else:
+                tx, ty = (float(v) for v in r["target"])
+                lim = float(r.get("max_mm", 1))
+            box = (max(tx - lim, E[0]), max(ty - lim, E[1]), min(tx + lim, E[2]), min(ty + lim, E[3]))
+            cands, ran = route_findspace(route, out, ref, box)
+            ok = [c for c in cands if ((c[0] - tx) ** 2 + (c[1] - ty) ** 2) ** 0.5 <= lim]
+            # 今の向きを先に（回すと配線の引き方が変わるので）、無ければほかの向き
+            ok = [c for c in ok if c[2] == ang] + [c for c in ok if c[2] != ang]
+            if not ok:
+                rec.update(ok=False, why=(f"{lim} mm 以内に空きが無い" if ran
+                                          else "kicad-route を動かせない（改良版のビルドが要る。kicad-plus doctor）"))
+                done.append(rec)
+                continue
+            best = ok[0]
         else:
-            os.replace(tmp, out)
+            continue
+        moved, why = route_place(route, out, ref, *best)
+        if moved:
             rec.update(ok=True, to=[round(best[0], 2), round(best[1], 2)])
-        for extra in (tmp.with_suffix(".kicad_pro"), tmp.with_suffix(".kicad_prl")):
-            if extra.exists():
-                extra.unlink()
+            if best[2] != ang:
+                rec["rotated"] = (best[2] - ang) % 360
+        else:
+            rec.update(ok=False, why=why)
         done.append(rec)
     return done
 
@@ -580,7 +634,7 @@ def main():
     ap.add_argument("--no-pwr-flag", action="store_true", help="PWR_FLAG を付けない")
     ap.add_argument("--no-nc", action="store_true", help="未接続の印を付けない")
     ap.add_argument("--place", action="store_true",
-                    help="縁の約束（placement の edge）を守れていない部品を、縁に沿った空きへ動かす（改良版のビルドが要る）")
+                    help="配置の約束（placement）を守れていない部品を動かす（findspace・place に改良版のビルドが要る）")
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args()
     for f in (a.schematic, a.board):
@@ -606,6 +660,9 @@ def main():
 
     sch = copy_project(a.schematic, a.board, out)
     rep["out_schematic"] = str(sch)
+    rep["notes"] = list(PRO_NOTE)
+    for n in PRO_NOTE:
+        say(f"  ※ {n}")
     say(f"写した: {sch.name}・{out.with_suffix('.kicad_pro').name}")
 
     if not a.no_pwr_flag:
@@ -640,11 +697,14 @@ def main():
             say(f"  ネットクラス {x['net']} → {x['netclass']}")
         rep["placement"] = check_placement(b, intent)
         if a.place and any(not x["ok"] for x in rep["placement"]):
-            rep["placed"] = place_on_edges(out, b, rep["placement"])
+            rep["placed"] = place_parts(out, b, rep["placement"])
             for x in rep["placed"]:
-                say(f"  動かした {x['ref']}: {x['from']} → {x['to']}（{SIDE_JA[x['edge']]}の縁"
+                r = x["rule"]
+                where = (f"{SIDE_JA[x['edge']]}の縁" if "edge" in r else
+                         f"{r['near']} の近く" if "near" in r else f"({r['target'][0]}, {r['target'][1]})")
+                say(f"  動かした {x['ref']}: {x['from']} → {x['to']}（{where}"
                     + (f"、{x['rotated']}° 回した" if x.get("rotated") else "") + "）" if x["ok"]
-                    else f"  ! {x['ref']} を縁へ動かせなかった: {x['why']}")
+                    else f"  ! {x['ref']} を動かせなかった（{where}）: {x['why']}")
             if any(x["ok"] for x in rep["placed"]):
                 b = load_board(out)
                 rep["placement"] = check_placement(b, intent)

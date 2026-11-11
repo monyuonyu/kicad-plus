@@ -31,8 +31,20 @@ jobs:
       - name: Install dependencies
         run: |
           # 部品ライブラリと、比べるための kicad-cli はシステムの KiCad（同じ系列を PPA から）
-          sudo add-apt-repository -y ppa:kicad/${{ matrix.ppa }}
-          sudo apt-get update
+          # add-apt-repository は鍵を api.launchpad.net に聞く。そこだけ落ちていることがある（2026-11-11 に 2 回）ので、
+          # 何度か試し、だめなら同じ持ち主の鍵（.github/keys/kicad-ppa.asc、Launchpad PPA for KiCad）で直接登録する
+          ok=
+          for i in 1 2 3; do
+            if sudo add-apt-repository -y ppa:kicad/${{ matrix.ppa }}; then ok=1; break; fi
+            sleep $((i * 30))
+          done
+          if [ -z "$ok" ]; then
+            echo "add-apt-repository が通らないので、鍵で直接 PPA を登録する"
+            sudo install -m 644 .github/keys/kicad-ppa.asc /etc/apt/keyrings/kicad-ppa.asc
+            echo "deb [signed-by=/etc/apt/keyrings/kicad-ppa.asc] https://ppa.launchpadcontent.net/kicad/${{ matrix.ppa }}/ubuntu $(lsb_release -cs) main" \
+              | sudo tee /etc/apt/sources.list.d/kicad-ppa.list
+          fi
+          for i in 1 2 3; do sudo apt-get update && break; sleep $((i * 30)); done
           sudo apt-get install -y $(cat ${{ matrix.deps }}) kicad ccache \
             python3-numpy python3-matplotlib python3-pil poppler-utils fonts-ipaexfont-gothic xvfb patchelf \
             imagemagick x11-utils locales
